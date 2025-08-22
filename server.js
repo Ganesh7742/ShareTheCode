@@ -26,12 +26,10 @@ const HOST = process.env.HOST || '0.0.0.0';
 io.on('connection', (socket) => {
     console.log('Client connected', socket.id);
 
-    // Handle user joining with name
     socket.on('user:join', (username) => {
         users.set(socket.id, username);
         socket.emit('init', { code: currentCode });
-        io.emit('user:joined', { id: socket.id, username });
-        console.log(`User ${username} joined (${socket.id})`);
+        io.emit('user:joined', { username });
 
         // Send existing snapshots
         const formattedSnapshots = Array.from(snapshots.entries()).map(([id, snapshot]) => ({
@@ -39,7 +37,6 @@ io.on('connection', (socket) => {
             name: snapshot.name,
             url: `/s/${id}`
         }));
-        
         if (formattedSnapshots.length > 0) {
             socket.emit('snapshots:init', { snapshots: formattedSnapshots });
         }
@@ -49,56 +46,34 @@ io.on('connection', (socket) => {
         if (!payload || typeof payload.code !== 'string') return;
         currentCode = payload.code;
         const username = users.get(socket.id) || 'Anonymous';
-        console.log(`Received update from ${username} (${socket.id}), length=${currentCode.length}`);
         socket.broadcast.emit('code:broadcast', { 
             code: currentCode,
-            username: username
+            username: username 
         });
     });
 
-    socket.on('disconnect', (reason) => {
-        const username = users.get(socket.id) || 'Anonymous';
-        console.log(`User ${username} disconnected (${socket.id}): ${reason}`);
-        io.emit('user:left', { id: socket.id, username });
-        users.delete(socket.id);
+    socket.on('disconnect', () => {
+        const username = users.get(socket.id);
+        if (username) {
+            io.emit('user:left', { username });
+            users.delete(socket.id);
+        }
     });
 });
 
-// Update snapshot creation to include creator's name
+// Create snapshot
 app.post('/api/snapshot', (req, res) => {
     const id = Math.random().toString(36).slice(2, 8);
     const name = req.body.name || `Snapshot ${id}`;
     const creator = req.body.username || 'Anonymous';
     snapshots.set(id, { code: currentCode, name, creator });
     
-    const shortUrl = `/s/${id}`;
-    io.emit('snapshot:created', { id, name, url: shortUrl, creator });
-    console.log('Snapshot created by', creator, ':', id, name, shortUrl);
-
-    return res.json({ id, name, url: shortUrl, creator });
+    const url = `/s/${id}`;
+    io.emit('snapshot:created', { id, name, url, creator });
+    return res.json({ id, name, url, creator });
 });
 
-app.get('/api/snapshot/:id', (req, res) => {
-    const { id } = req.params;
-    const snapshot = snapshots.get(id);
-    if (!snapshot) {
-        return res.status(404).json({ error: 'Not found' });
-    }
-    return res.json({ id, code: snapshot.code, name: snapshot.name });
-});
-
-app.delete('/api/snapshot/:id', (req, res) => {
-    const { id } = req.params;
-    if (!snapshots.has(id)) {
-        return res.status(404).json({ error: 'Not found' });
-    }
-    snapshots.delete(id);
-    io.emit('snapshot:deleted', { id });
-    console.log('Snapshot deleted:', id);
-    return res.json({ success: true });
-});
-
-// Update snapshot viewer to show creator
+// Get snapshot
 app.get('/s/:id', (req, res) => {
     const id = req.params.id;
     const snapshot = snapshots.get(id);
@@ -128,7 +103,6 @@ app.get('/s/:id', (req, res) => {
     }
 });
 
-// Helper function for HTML escaping
 function escapeHtml(str) {
     return str.replace(/[&<>"']/g, function(m) {
         return ({
@@ -141,7 +115,6 @@ function escapeHtml(str) {
     });
 }
 
-// Start server
 server.listen(PORT, HOST, () => {
     console.log(`Server listening on http://${HOST}:${PORT}`);
 });

@@ -16,10 +16,18 @@
 	</style>
 </head>
 <body>
-	<h1>Global Code Board</h1>
-	<p>Everyone sees and edits the same code in real time. <a href="/" style="color: #007bff; text-decoration: none;">🔄 Live Editor</a></p>
-	<textarea id="code" placeholder="Start typing..."></textarea>
-	<div id="row">
+    <div id="userModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+        <div style="background:white; padding:20px; border-radius:8px; width:300px; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
+            <h2>Enter your name</h2>
+            <input type="text" id="username" style="width:100%; padding:8px; margin:10px 0;" placeholder="Your name...">
+            <button onclick="joinChat()" style="width:100%;">Join</button>
+        </div>
+    </div>
+
+    <h1>Global Code Board</h1>
+    <p>Everyone sees and edits the same code in real time. <a href="/" style="color: #007bff; text-decoration: none;">🔄 Live Editor</a></p>
+    <textarea id="code" placeholder="Start typing..."></textarea>
+    <div id="row">
 		<input type="text" id="snapshotName" placeholder="Enter snapshot name..." style="flex: 1; padding: 10px 16px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;" />
 		<button id="saveBtn">Save Snapshot</button>
 		<span id="status" aria-live="polite"></span>
@@ -39,17 +47,48 @@
 		const textarea = document.getElementById('code');
 		const status = document.getElementById('status');
 		const snapshotList = document.getElementById('snapshotList');
+		const userModal = document.getElementById('userModal');
+		let username = '';
 
-		let isApplyingRemote = false;
-		let lastLocalValue = '';
-		let sharedSnapshots = new Map();
+		// Show username modal on load
+		userModal.style.display = 'block';
+
+		function joinChat() {
+			const nameInput = document.getElementById('username');
+			username = nameInput.value.trim();
+			if (!username) {
+				alert('Please enter a name');
+				return;
+			}
+			userModal.style.display = 'none';
+			socket.emit('user:join', username);
+		}
+
+		// Handle enter key in username input
+		document.getElementById('username').addEventListener('keypress', (e) => {
+			if (e.key === 'Enter') joinChat();
+		});
 
 		socket.on('connect', () => {
 			status.textContent = 'Connected';
 		});
-		socket.on('connect_error', (err) => {
-			status.textContent = 'Connection error';
-			console.error('socket connect_error', err);
+
+		socket.on('user:joined', ({ username }) => {
+			status.textContent = `${username} joined`;
+			setTimeout(() => {
+				if (status.textContent === `${username} joined`) {
+					status.textContent = 'Connected';
+				}
+			}, 3000);
+		});
+
+		socket.on('user:left', ({ username }) => {
+			status.textContent = `${username} left`;
+			setTimeout(() => {
+				if (status.textContent === `${username} left`) {
+					status.textContent = 'Connected';
+				}
+			}, 3000);
 		});
 
 		// Receive initial content
@@ -72,12 +111,12 @@
 		});
 
 		// Receive broadcast updates from others
-		socket.on('code:broadcast', ({ code }) => {
+		socket.on('code:broadcast', ({ code, username }) => {
 			isApplyingRemote = true;
 			textarea.value = code || '';
 			lastLocalValue = textarea.value;
 			isApplyingRemote = false;
-			status.textContent = 'Updated from another user';
+			status.textContent = `Updated by ${username}`;
 		});
 
 		// Receive snapshot creation broadcast
@@ -162,7 +201,7 @@
 						'Accept': 'application/json',
 						'Content-Type': 'application/json'
 					},
-					body: JSON.stringify({ name: name })
+					body: JSON.stringify({ name: name, username: username })
 				});
 				let data;
 				const ct = res.headers.get('content-type') || '';
