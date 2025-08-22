@@ -23,6 +23,11 @@ const users = new Map(); // Store connected users and their names
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
+// Limit number of snapshots
+const MAX_SNAPSHOTS = 10; 
+// Limit chat history length
+const MAX_CODE_LENGTH = 50000; 
+
 io.on('connection', (socket) => {
     console.log('Client connected', socket.id);
 
@@ -51,6 +56,12 @@ io.on('connection', (socket) => {
         const username = users.get(socket.id) || 'Anonymous';
         // Format the message with username
         const formattedMessage = `${username}: ${payload.code}\n`;
+        
+        // Trim chat history if too long
+        if (currentCode.length > MAX_CODE_LENGTH) {
+            currentCode = currentCode.slice(-MAX_CODE_LENGTH/2);
+        }
+        
         currentCode = currentCode + formattedMessage; // Append new message
         
         socket.broadcast.emit('code:broadcast', { 
@@ -76,6 +87,12 @@ io.on('connection', (socket) => {
 
 // Create snapshot
 app.post('/api/snapshot', (req, res) => {
+    // Clear old snapshots if limit reached
+    if (snapshots.size >= MAX_SNAPSHOTS) {
+        const oldestId = snapshots.keys().next().value;
+        snapshots.delete(oldestId);
+    }
+
     const id = Math.random().toString(36).slice(2, 8);
     const name = req.body.name || `Snapshot ${id}`;
     const creator = req.body.username || 'Anonymous';
