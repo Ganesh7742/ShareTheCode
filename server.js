@@ -22,7 +22,6 @@ const users = new Map();
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
-const MAX_CODE_LENGTH = 50000;
 
 io.on('connection', (socket) => {
     console.log('Client connected', socket.id);
@@ -32,7 +31,7 @@ io.on('connection', (socket) => {
         socket.emit('init', { code: currentCode });
         io.emit('user:joined', { username });
 
-        // Send existing snapshots
+        // Send existing snapshots to new clients
         const formattedSnapshots = Array.from(snapshots.entries()).map(([id, snapshot]) => ({
             id,
             name: snapshot.name,
@@ -50,37 +49,16 @@ io.on('connection', (socket) => {
         if (!payload || typeof payload.code !== 'string') return;
         const username = users.get(socket.id) || 'Anonymous';
         const message = payload.code.trim();
-        
         if (message) {
             const formattedMessage = `${username}: ${message}\n`;
-            
-            // Trim chat history if too long
-            if (currentCode.length > MAX_CODE_LENGTH) {
-                currentCode = currentCode.slice(-MAX_CODE_LENGTH/2);
-            }
-            
-            // Update current code
             currentCode += formattedMessage;
-            
-            // Broadcast only the new message
-            socket.broadcast.emit('code:broadcast', {
-                code: formattedMessage,
-                username: username,
-                isNewMessage: true
-            });
+            socket.broadcast.emit('code:broadcast', { code: formattedMessage, username });
         }
     });
 
     socket.on('disconnect', () => {
         const username = users.get(socket.id);
         if (username) {
-            const leftMessage = `\n${username} left the chat\n`;
-            currentCode += leftMessage;
-            io.emit('code:broadcast', {
-                code: leftMessage,
-                username: 'System',
-                isNewMessage: true
-            });
             io.emit('user:left', { username });
             users.delete(socket.id);
         }
@@ -100,11 +78,16 @@ app.post('/api/snapshot', (req, res) => {
         timestamp: new Date().toISOString()
     });
     
-    const url = `/s/${id}`;
-    const snapshotData = { id, name, url, creator };
+    const snapshotData = {
+        id,
+        name,
+        url: `/s/${id}`,
+        creator,
+        timestamp: new Date().toISOString()
+    };
     
     io.emit('snapshot:created', snapshotData);
-    console.log('Chat snapshot saved:', id, name, url);
+    console.log('Chat snapshot saved:', id, name);
     
     return res.json(snapshotData);
 });

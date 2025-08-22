@@ -13,6 +13,27 @@
 		.snapshot-item { background: #f8f9fa; padding: 8px; margin: 4px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
 		.snapshot-link { color: #007bff; text-decoration: none; }
 		.snapshot-link:hover { text-decoration: underline; }
+		#snapshotList {
+			margin-top: 20px;
+			background: #333;
+			padding: 10px;
+			border-radius: 8px;
+			max-height: 200px;
+			overflow-y: auto;
+		}
+		.snapshot-item {
+			background: #444;
+			margin: 5px 0;
+			padding: 10px;
+			border-radius: 4px;
+		}
+		.snapshot-item a {
+			color: #007bff;
+			text-decoration: none;
+		}
+		.snapshot-item a:hover {
+			text-decoration: underline;
+		}
 	</style>
 </head>
 <body>
@@ -232,6 +253,32 @@
 
 		// Initialize snapshot list
 		updateSnapshotList();
+
+		function updateSnapshotsList(snapshot) {
+			const snapshotList = document.getElementById('snapshotList');
+			const item = document.createElement('div');
+			item.className = 'snapshot-item';
+			
+			const time = new Date(snapshot.timestamp).toLocaleString();
+			item.innerHTML = `
+				<strong>${snapshot.name}</strong> 
+				<span style="color: #888">(by ${snapshot.creator})</span>
+				<div>${time}</div>
+				<a href="${snapshot.url}" target="_blank">View Chat</a>
+			`;
+			
+			snapshotList.insertBefore(item, snapshotList.firstChild);
+		}
+
+		// Update your socket.io event handlers
+		socket.on('snapshot:created', (snapshot) => {
+			updateSnapshotsList(snapshot);
+			status.textContent = `Snapshot saved: ${snapshot.name}`;
+		});
+
+		socket.on('snapshots:init', ({ snapshots }) => {
+			snapshots.forEach(updateSnapshotsList);
+		});
 	</script>
 </body>
 </html>
