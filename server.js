@@ -28,7 +28,11 @@ io.on('connection', (socket) => {
 
     socket.on('user:join', (username) => {
         users.set(socket.id, username);
-        socket.emit('init', { code: currentCode });
+        // Send initial code with previous messages intact
+        socket.emit('init', { 
+            code: currentCode,
+            username: username 
+        });
         io.emit('user:joined', { username });
 
         // Send existing snapshots
@@ -44,8 +48,11 @@ io.on('connection', (socket) => {
 
     socket.on('code:update', (payload) => {
         if (!payload || typeof payload.code !== 'string') return;
-        currentCode = payload.code;
         const username = users.get(socket.id) || 'Anonymous';
+        // Format the message with username
+        const formattedMessage = `${username}: ${payload.code}\n`;
+        currentCode = currentCode + formattedMessage; // Append new message
+        
         socket.broadcast.emit('code:broadcast', { 
             code: currentCode,
             username: username 
@@ -55,6 +62,12 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         const username = users.get(socket.id);
         if (username) {
+            const leftMessage = `\n${username} left the chat\n`;
+            currentCode = currentCode + leftMessage;
+            io.emit('code:broadcast', { 
+                code: currentCode,
+                username: 'System' 
+            });
             io.emit('user:left', { username });
             users.delete(socket.id);
         }
