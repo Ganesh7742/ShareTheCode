@@ -49,12 +49,11 @@ io.on('connection', async (socket) => {
     socket.emit('init', { code: currentCode });
     
     // Get snapshots from MongoDB instead of Map
-    const baseUrl = process.env.RAILWAY_STATIC_URL || `${socket.request.protocol}://${socket.request.get('host')}`;
     const existingSnapshots = await snapshotsCollection.find({}).toArray();
     const formattedSnapshots = existingSnapshots.map(snapshot => ({
         id: snapshot._id,
         name: snapshot.name,
-        url: `${baseUrl}/s/${snapshot._id}`
+        url: `/s/${snapshot._id}` // Fix: Use relative URL
     }));
     
     if (formattedSnapshots.length > 0) {
@@ -75,14 +74,15 @@ io.on('connection', async (socket) => {
 	});
 });
 
-// Create a snapshot of currentCode and return a shareable URL
+// Update the snapshot creation to use correct URL format
 app.post('/api/snapshot', async (req, res) => {
   const id = Math.random().toString(36).slice(2, 8);
   const name = req.body.name || `Snapshot ${id}`;
   const snapshot = { _id: id, code: currentCode, name: name };
   await snapshotsCollection.insertOne(snapshot);
-  const baseUrl = process.env.RAILWAY_STATIC_URL || `${req.protocol}://${req.get('host')}`;
-  const url = `${baseUrl}/s/${id}`;
+  
+  // Fix: Use the correct URL format
+  const url = `/s/${id}`; // Remove baseUrl to make it relative
 
   io.emit('snapshot:created', { id, name, url });
   console.log('Snapshot created:', id, name, 'broadcasting to all clients');
