@@ -90,7 +90,7 @@ app.delete('/api/snapshot/:id', (req, res) => {
 // Serve snapshot viewer page
 app.get('/s/:id', (req, res) => {
   const id = req.params.id;
-  const snapshot = snapshots[id];
+  const snapshot = snapshots.get(id); // <-- FIXED
   if (snapshot) {
     res.send(snapshot.code); // or render a page with the code
   } else {
