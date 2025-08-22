@@ -17,7 +17,14 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 let currentCode = '';
+
+// Move these to the top, before they're used
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+// Fix the MongoDB connection string (URL encode the @ in password)
 const MONGO_URL = process.env.MONGO_URL || 'mongodb+srv://ganeshnamani01:ganesh%401409@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority';
+
 const DB_NAME = 'sharethecode';
 const COLLECTION = 'snapshots';
 let db, snapshotsCollection;
@@ -36,21 +43,23 @@ MongoClient.connect(MONGO_URL, { useUnifiedTopology: true })
     process.exit(1);
   });
 
-io.on('connection', (socket) => {
-	console.log('Client connected', socket.id);
-	// Send current code to the newly connected client
-	socket.emit('init', { code: currentCode });
-	
-	// Send all existing snapshots to the new client
-	const baseUrl = process.env.RAILWAY_STATIC_URL || `${socket.request.protocol}://${socket.request.get('host')}`;
-	const existingSnapshots = Array.from(snapshots.entries()).map(([id, snapshot]) => ({
-		id,
-		name: snapshot.name,
-		url: `${baseUrl}/s/${id}`
-	}));
-	if (existingSnapshots.length > 0) {
-		socket.emit('snapshots:init', { snapshots: existingSnapshots });
-	}
+// Update the socket connection code to use MongoDB instead of snapshots Map
+io.on('connection', async (socket) => {
+    console.log('Client connected', socket.id);
+    socket.emit('init', { code: currentCode });
+    
+    // Get snapshots from MongoDB instead of Map
+    const baseUrl = process.env.RAILWAY_STATIC_URL || `${socket.request.protocol}://${socket.request.get('host')}`;
+    const existingSnapshots = await snapshotsCollection.find({}).toArray();
+    const formattedSnapshots = existingSnapshots.map(snapshot => ({
+        id: snapshot._id,
+        name: snapshot.name,
+        url: `${baseUrl}/s/${snapshot._id}`
+    }));
+    
+    if (formattedSnapshots.length > 0) {
+        socket.emit('snapshots:init', { snapshots: formattedSnapshots });
+    }
 
 	// Listen for code updates from any client
 	socket.on('code:update', (payload) => {
@@ -142,8 +151,5 @@ function escapeHtml(str) {
     })[m];
   });
 }
-
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
 
 
