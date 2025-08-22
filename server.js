@@ -22,8 +22,8 @@ let currentCode = '';
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Fix the MongoDB connection string (URL encode the @ in password)
-const MONGO_URL = process.env.MONGO_URL || 'mongodb+srv://ganeshnamani01:ganesh%401409@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority';
+// Update MongoDB connection string with your actual cluster ID
+const MONGO_URL = 'mongodb+srv://ganeshnamani01:ganesh%402409@cluster0.sstpukz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 const DB_NAME = 'sharethecode';
 const COLLECTION = 'snapshots';
@@ -43,6 +43,11 @@ MongoClient.connect(MONGO_URL, { useUnifiedTopology: true })
     process.exit(1);
   });
 
+// Add a helper function to get base URL
+function getBaseUrl(req) {
+  return process.env.RAILWAY_STATIC_URL || `${req.protocol}://${req.get('host')}`;
+}
+
 // Update the socket connection code to use MongoDB instead of snapshots Map
 io.on('connection', async (socket) => {
     console.log('Client connected', socket.id);
@@ -50,10 +55,11 @@ io.on('connection', async (socket) => {
     
     // Get snapshots from MongoDB instead of Map
     const existingSnapshots = await snapshotsCollection.find({}).toArray();
+    const baseUrl = getBaseUrl(socket.request);
     const formattedSnapshots = existingSnapshots.map(snapshot => ({
         id: snapshot._id,
         name: snapshot.name,
-        url: `/s/${snapshot._id}` // Fix: Use relative URL
+        url: `${baseUrl}/s/${snapshot._id}` // Full URL
     }));
     
     if (formattedSnapshots.length > 0) {
@@ -74,18 +80,17 @@ io.on('connection', async (socket) => {
 	});
 });
 
-// Update the snapshot creation to use correct URL format
+// Update snapshot creation
 app.post('/api/snapshot', async (req, res) => {
   const id = Math.random().toString(36).slice(2, 8);
   const name = req.body.name || `Snapshot ${id}`;
   const snapshot = { _id: id, code: currentCode, name: name };
   await snapshotsCollection.insertOne(snapshot);
   
-  // Fix: Use the correct URL format
-  const url = `/s/${id}`; // Remove baseUrl to make it relative
+  const url = `${getBaseUrl(req)}/s/${id}`; // Full URL
 
   io.emit('snapshot:created', { id, name, url });
-  console.log('Snapshot created:', id, name, 'broadcasting to all clients');
+  console.log('Snapshot created:', id, name, url);
 
   return res.json({ id, name, url });
 });
