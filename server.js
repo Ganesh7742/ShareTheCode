@@ -51,6 +51,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Update the code:update event handler
     socket.on('code:update', (payload) => {
         if (!payload || typeof payload.code !== 'string') return;
         const username = users.get(socket.id) || 'Anonymous';
@@ -62,12 +63,15 @@ io.on('connection', (socket) => {
             currentCode = currentCode.slice(-MAX_CODE_LENGTH/2);
         }
         
-        currentCode = currentCode + formattedMessage; // Append new message
-        
+        // Send only the new message instead of entire chat history
         socket.broadcast.emit('code:broadcast', { 
-            code: currentCode,
-            username: username 
+            code: formattedMessage,
+            username: username,
+            isNewMessage: true // Flag to indicate this is a new message
         });
+
+        // Append new message to current code
+        currentCode = currentCode + formattedMessage;
     });
 
     socket.on('disconnect', () => {
@@ -76,8 +80,9 @@ io.on('connection', (socket) => {
             const leftMessage = `\n${username} left the chat\n`;
             currentCode = currentCode + leftMessage;
             io.emit('code:broadcast', { 
-                code: currentCode,
-                username: 'System' 
+                code: leftMessage,
+                username: 'System',
+                isNewMessage: true
             });
             io.emit('user:left', { username });
             users.delete(socket.id);
