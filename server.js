@@ -89,7 +89,13 @@ app.delete('/api/snapshot/:id', (req, res) => {
 
 // Serve snapshot viewer page
 app.get('/s/:id', (req, res) => {
-	res.sendFile(path.join(__dirname, 'public', 'snapshot.html'));
+  const id = req.params.id;
+  const snapshot = snapshots[id];
+  if (snapshot) {
+    res.send(snapshot.code); // or render a page with the code
+  } else {
+    res.status(404).send('Snapshot not found');
+  }
 });
 
 const PORT = process.env.PORT || 3000;
