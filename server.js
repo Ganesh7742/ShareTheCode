@@ -5,13 +5,11 @@ const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const path = require('path');
-const fs = require('fs');
-const { MongoClient } = require('mongodb');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-	cors: { origin: '*', methods: ['GET', 'POST'] }
+    cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
 app.use(cors());
@@ -19,171 +17,123 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 let currentCode = '';
+const snapshots = new Map();
 
-// Move these to the top, before they're used
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Replace hardcoded MongoDB URL with environment variable
-const MONGO_URL = process.env.MONGODB_URI;
-if (!MONGO_URL) {
-  console.error('MONGODB_URI environment variable is required');
-  process.exit(1);
-}
-
-const DB_NAME = 'sharethecode';
-const COLLECTION = 'snapshots';
-let db, snapshotsCollection;
-
-// Connect to MongoDB before starting the server
-MongoClient.connect(MONGO_URL, { useUnifiedTopology: true })
-  .then(client => {
-    db = client.db(DB_NAME);
-    snapshotsCollection = db.collection(COLLECTION);
-    server.listen(PORT, HOST, () => {
-      console.log(`Server listening on http://${HOST}:${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('Failed to connect to MongoDB', err);
-    process.exit(1);
-  });
-
-// Add a helper function to get base URL
-function getBaseUrl(req) {
-  if (process.env.RAILWAY_STATIC_URL) {
-    return process.env.RAILWAY_STATIC_URL.replace(/\/$/, ''); // Remove trailing slash
-  }
-  return `${req.protocol}://${req.get('host')}`;
-}
-
-// Update the socket connection code to use MongoDB instead of snapshots Map
-io.on('connection', async (socket) => {
+io.on('connection', (socket) => {
     console.log('Client connected', socket.id);
     socket.emit('init', { code: currentCode });
-    
-    // Get snapshots from MongoDB instead of Map
-    const existingSnapshots = await snapshotsCollection.find({}).toArray();
-    const baseUrl = getBaseUrl(socket.request);
-    const formattedSnapshots = existingSnapshots.map(snapshot => ({
-        id: snapshot._id,
+
+    // Send existing snapshots
+    const formattedSnapshots = Array.from(snapshots.entries()).map(([id, snapshot]) => ({
+        id,
         name: snapshot.name,
-        url: `/s/${snapshot._id}` // Use short URL format
+        url: `/s/${id}`,
+        timestamp: snapshot.timestamp
     }));
     
     if (formattedSnapshots.length > 0) {
         socket.emit('snapshots:init', { snapshots: formattedSnapshots });
     }
 
-	// Listen for code updates from any client
-	socket.on('code:update', (payload) => {
-		if (!payload || typeof payload.code !== 'string') return;
-		currentCode = payload.code;
-		console.log('Received update from', socket.id, 'length=', currentCode.length);
-		// Broadcast to all other clients
-		socket.broadcast.emit('code:broadcast', { code: currentCode });
-	});
+    socket.on('code:update', (payload) => {
+        if (!payload || typeof payload.code !== 'string') return;
+        currentCode = payload.code;
+        socket.broadcast.emit('code:broadcast', { code: currentCode });
+    });
 
-	socket.on('disconnect', (reason) => {
-		console.log('Client disconnected', socket.id, reason);
-	});
+    socket.on('disconnect', () => {
+        console.log('Client disconnected', socket.id);
+    });
 });
 
-// Update snapshot creation
-app.post('/api/snapshot', async (req, res) => {
-  const id = Math.random().toString(36).slice(2, 8);
-  const name = req.body.name || `Snapshot ${id}`;
-  const snapshot = { _id: id, code: currentCode, name: name };
-  await snapshotsCollection.insertOne(snapshot);
-  
-  // Change URL format
-  const shortUrl = `/s/${id}`;
-
-  io.emit('snapshot:created', { id, name, url: shortUrl });
-  console.log('Snapshot created:', id, name, shortUrl);
-
-  return res.json({ id, name, url: shortUrl });
-});
-
-// Fetch snapshot JSON
-app.get('/api/snapshot/:id', async (req, res) => {
-  const { id } = req.params;
-  const snapshot = await snapshotsCollection.findOne({ _id: id });
-  if (!snapshot) {
-    return res.status(404).json({ error: 'Not found' });
-  }
-  return res.json({ id, code: snapshot.code, name: snapshot.name });
-});
-
-// Delete snapshot
-app.delete('/api/snapshot/:id', async (req, res) => {
-  const { id } = req.params;
-  const result = await snapshotsCollection.deleteOne({ _id: id });
-  if (result.deletedCount === 0) {
-    return res.status(404).json({ error: 'Not found' });
-  }
-  io.emit('snapshot:deleted', { id });
-  console.log('Snapshot deleted:', id, 'broadcasting to all clients');
-  return res.json({ success: true });
-});
-
-// Add this route BEFORE all other routes
-app.get('*', (req, res, next) => {
-  // Remove Railway URL prefix if present
-  if (req.url.includes('web-production-')) {
-    const newUrl = req.url.replace(/.*web-production-[^/]+\.up\.railway\.app/, '');
-    return res.redirect(newUrl);
-  }
-  next();
-});
-
-// Update the snapshot viewer route
-app.get('/s/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    console.log('Looking for snapshot:', id); // Debug log
+// Create snapshot
+app.post('/api/snapshot', (req, res) => {
+    const id = Math.random().toString(36).slice(2, 8);
+    const name = req.body.name || `Snapshot ${new Date().toLocaleString()}`;
     
-    const snapshot = await snapshotsCollection.findOne({ _id: id });
-    console.log('Found snapshot:', !!snapshot); // Debug log
+    snapshots.set(id, {
+        code: currentCode,
+        name,
+        timestamp: new Date().toISOString()
+    });
+    
+    const snapshotData = {
+        id,
+        name,
+        url: `/s/${id}`,
+        timestamp: new Date().toISOString()
+    };
+    
+    io.emit('snapshot:created', snapshotData);
+    console.log('Snapshot saved:', id, name);
+    
+    return res.json(snapshotData);
+});
+
+// View snapshot
+app.get('/s/:id', (req, res) => {
+    const id = req.params.id;
+    const snapshot = snapshots.get(id);
     
     if (snapshot) {
-      res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Snapshot: ${snapshot.name}</title>
-          <meta charset="UTF-8" />
-          <style>
-            body { font-family: monospace; background: #222; color: #eee; padding: 2rem; }
-            pre { background: #111; padding: 1rem; border-radius: 8px; overflow-x: auto; }
-          </style>
-        </head>
-        <body>
-          <h2>${snapshot.name}</h2>
-          <pre>${escapeHtml(snapshot.code)}</pre>
-        </body>
-        </html>
-      `);
+        res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Snapshot: ${snapshot.name}</title>
+                <meta charset="UTF-8" />
+                <style>
+                    body { 
+                        font-family: monospace; 
+                        background: #222; 
+                        color: #eee; 
+                        padding: 2rem;
+                        line-height: 1.6;
+                    }
+                    .content { 
+                        background: #111; 
+                        padding: 1rem; 
+                        border-radius: 8px; 
+                        white-space: pre-wrap;
+                    }
+                    .meta { 
+                        color: #888; 
+                        font-size: 0.9em; 
+                        margin-bottom: 1rem; 
+                    }
+                </style>
+            </head>
+            <body>
+                <h2>${snapshot.name}</h2>
+                <div class="meta">
+                    Time: ${new Date(snapshot.timestamp).toLocaleString()}
+                </div>
+                <div class="content">${escapeHtml(snapshot.code)}</div>
+            </body>
+            </html>
+        `);
     } else {
-      res.status(404).send('Snapshot not found');
+        res.status(404).send('Snapshot not found');
     }
-  } catch (error) {
-    console.error('Error fetching snapshot:', error);
-    res.status(500).send('Server error');
-  }
 });
 
-// Helper to escape HTML special chars
 function escapeHtml(str) {
-  return str.replace(/[&<>"']/g, function(m) {
-    return ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    })[m];
-  });
+    return str.replace(/[&<>"']/g, function(m) {
+        return ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[m];
+    });
 }
+
+server.listen(PORT, HOST, () => {
+    console.log(`Server listening on http://${HOST}:${PORT}`);
+});
 
 
