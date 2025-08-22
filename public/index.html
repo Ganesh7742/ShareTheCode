@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Global Code Board</title>
+	<style>
+		body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+		textarea { width: 100%; height: 60vh; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; padding: 12px; box-sizing: border-box; }
+		button { padding: 10px 16px; font-size: 14px; cursor: pointer; }
+		#row { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+		#status { min-height: 1.2em; color: #555; }
+		.snapshot-item { background: #f8f9fa; padding: 8px; margin: 4px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+		.snapshot-link { color: #007bff; text-decoration: none; }
+		.snapshot-link:hover { text-decoration: underline; }
+	</style>
+</head>
+<body>
+	<h1>Global Code Board</h1>
+	<p>Everyone sees and edits the same code in real time. <a href="/" style="color: #007bff; text-decoration: none;">🔄 Live Editor</a></p>
+	<textarea id="code" placeholder="Start typing..."></textarea>
+	<div id="row">
+		<input type="text" id="snapshotName" placeholder="Enter snapshot name..." style="flex: 1; padding: 10px 16px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;" />
+		<button id="saveBtn">Save Snapshot</button>
+		<span id="status" aria-live="polite"></span>
+	</div>
+	<div id="snapshotRow" style="margin-top:8px; display:none;">
+		<label>Snapshot link:</label>
+		<input id="snapshotLink" readonly style="width:100%; padding:8px;" />
+	</div>
+	<div id="sharedSnapshots" style="margin-top:16px;">
+		<h3>Shared Snapshots</h3>
+		<div id="snapshotList"></div>
+	</div>
+
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		const socket = io();
+		const textarea = document.getElementById('code');
+		const status = document.getElementById('status');
+		const snapshotList = document.getElementById('snapshotList');
+
+		let isApplyingRemote = false;
+		let lastLocalValue = '';
+		let sharedSnapshots = new Map();
+
+		socket.on('connect', () => {
+			status.textContent = 'Connected';
+		});
+		socket.on('connect_error', (err) => {
+			status.textContent = 'Connection error';
+			console.error('socket connect_error', err);
+		});
+
+		// Receive initial content
+		socket.on('init', ({ code }) => {
+			isApplyingRemote = true;
+			textarea.value = code || '';
+			lastLocalValue = textarea.value;
+			isApplyingRemote = false;
+		});
+
+		// Receive initial snapshots
+		socket.on('snapshots:init', ({ snapshots }) => {
+			snapshots.forEach(snapshot => {
+				sharedSnapshots.set(snapshot.id, { url: snapshot.url, name: snapshot.name });
+			});
+			updateSnapshotList();
+			if (snapshots.length > 0) {
+				status.textContent = `Loaded ${snapshots.length} existing snapshot(s)`;
+			}
+		});
+
+		// Receive broadcast updates from others
+		socket.on('code:broadcast', ({ code }) => {
+			isApplyingRemote = true;
+			textarea.value = code || '';
+			lastLocalValue = textarea.value;
+			isApplyingRemote = false;
+			status.textContent = 'Updated from another user';
+		});
+
+		// Receive snapshot creation broadcast
+		socket.on('snapshot:created', ({ id, name, url }) => {
+			sharedSnapshots.set(id, { url: url, name: name });
+			updateSnapshotList();
+			status.textContent = 'New snapshot shared!';
+		});
+
+		// Receive snapshot deletion broadcast
+		socket.on('snapshot:deleted', ({ id }) => {
+			sharedSnapshots.delete(id);
+			updateSnapshotList();
+			status.textContent = 'Snapshot deleted';
+		});
+
+		function updateSnapshotList() {
+			if (sharedSnapshots.size === 0) {
+				snapshotList.innerHTML = '<p style="color:#666;">No snapshots yet</p>';
+				return;
+			}
+			
+			snapshotList.innerHTML = '';
+			sharedSnapshots.forEach((snapshot, id) => {
+				const item = document.createElement('div');
+				item.className = 'snapshot-item';
+				item.innerHTML = `
+					<a href="${snapshot.url}" target="_blank" class="snapshot-link">${snapshot.name}</a>
+					<button onclick="deleteSnapshot('${id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; font-size:12px;">Delete</button>
+				`;
+				snapshotList.appendChild(item);
+			});
+		}
+
+		window.deleteSnapshot = async (id) => {
+			if (!confirm('Delete this snapshot? This cannot be undone.')) return;
+			try {
+				const res = await fetch('/api/snapshot/' + encodeURIComponent(id), { method: 'DELETE' });
+				if (!res.ok) throw new Error('Failed to delete');
+				status.textContent = 'Deleted!';
+			} catch (e) {
+				status.textContent = 'Delete failed';
+			}
+		};
+
+		// Send local changes
+		textarea.addEventListener('input', () => {
+			if (isApplyingRemote) return;
+			const value = textarea.value;
+			if (value === lastLocalValue) return;
+			lastLocalValue = value;
+			socket.emit('code:update', { code: value });
+			status.textContent = 'Synced';
+		});
+
+		// Clear placeholder when text is pasted or typed
+		textarea.addEventListener('paste', () => {
+			// Clear placeholder after a short delay to allow paste to complete
+			setTimeout(() => {
+				if (textarea.value && textarea.value !== '') {
+					textarea.placeholder = '';
+				}
+			}, 10);
+		});
+
+		// Clear placeholder on first input
+		textarea.addEventListener('input', () => {
+			if (textarea.value && textarea.value !== '') {
+				textarea.placeholder = '';
+			}
+		}, { once: true });
+
+		document.getElementById('saveBtn').addEventListener('click', async () => {
+			const nameInput = document.getElementById('snapshotName');
+			const name = nameInput.value.trim() || `Snapshot ${Date.now()}`;
+			
+			status.textContent = 'Saving snapshot...';
+			try {
+				const res = await fetch('/api/snapshot', { 
+					method: 'POST', 
+					headers: { 
+						'Accept': 'application/json',
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({ name: name })
+				});
+				let data;
+				const ct = res.headers.get('content-type') || '';
+				if (ct.includes('application/json')) {
+					data = await res.json();
+				} else {
+					const text = await res.text();
+					throw new Error('Unexpected response: ' + text.slice(0, 120));
+				}
+				if (!res.ok) throw new Error(data.error || 'Failed to save');
+				document.getElementById('snapshotRow').style.display = 'block';
+				const link = document.getElementById('snapshotLink');
+				link.value = data.url;
+				link.focus();
+				link.select();
+				status.textContent = 'Snapshot saved!';
+				
+				// Clear the textarea and name input after saving
+				textarea.value = '';
+				lastLocalValue = '';
+				textarea.placeholder = 'Start typing...';
+				nameInput.value = '';
+				socket.emit('code:update', { code: '' });
+			} catch (e) {
+				status.textContent = e.message || 'Error saving snapshot';
+			}
+		});
+
+		// Initialize snapshot list
+		updateSnapshotList();
+	</script>
+</body>
+</html>
+
+
