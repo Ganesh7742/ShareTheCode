@@ -90,13 +90,42 @@ app.delete('/api/snapshot/:id', (req, res) => {
 // Serve snapshot viewer page
 app.get('/s/:id', (req, res) => {
   const id = req.params.id;
-  const snapshot = snapshots.get(id); // <-- FIXED
+  const snapshot = snapshots.get(id);
   if (snapshot) {
-    res.send(snapshot.code); // or render a page with the code
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Snapshot: ${snapshot.name}</title>
+        <meta charset="UTF-8" />
+        <style>
+          body { font-family: monospace; background: #222; color: #eee; padding: 2rem; }
+          pre { background: #111; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        </style>
+      </head>
+      <body>
+        <h2>${snapshot.name}</h2>
+        <pre>${escapeHtml(snapshot.code)}</pre>
+      </body>
+      </html>
+    `);
   } else {
     res.status(404).send('Snapshot not found');
   }
 });
+
+// Helper to escape HTML special chars
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, function(m) {
+    return ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[m];
+  });
+}
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
