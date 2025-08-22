@@ -18,68 +18,65 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 let currentCode = '';
 const snapshots = new Map();
-const users = new Map(); // Store connected users and their names
+const users = new Map();
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
-
-// Limit number of snapshots
-const MAX_SNAPSHOTS = 10; 
-// Limit chat history length
-const MAX_CODE_LENGTH = 50000; 
+const MAX_CODE_LENGTH = 50000;
 
 io.on('connection', (socket) => {
     console.log('Client connected', socket.id);
 
     socket.on('user:join', (username) => {
         users.set(socket.id, username);
-        // Send initial code with previous messages intact
-        socket.emit('init', { 
-            code: currentCode,
-            username: username 
-        });
+        socket.emit('init', { code: currentCode });
         io.emit('user:joined', { username });
 
         // Send existing snapshots
         const formattedSnapshots = Array.from(snapshots.entries()).map(([id, snapshot]) => ({
             id,
             name: snapshot.name,
-            url: `/s/${id}`
+            url: `/s/${id}`,
+            creator: snapshot.creator,
+            timestamp: snapshot.timestamp
         }));
+        
         if (formattedSnapshots.length > 0) {
             socket.emit('snapshots:init', { snapshots: formattedSnapshots });
         }
     });
 
-    // Update the code:update event handler
     socket.on('code:update', (payload) => {
         if (!payload || typeof payload.code !== 'string') return;
         const username = users.get(socket.id) || 'Anonymous';
-        // Format the message with username
-        const formattedMessage = `${username}: ${payload.code}\n`;
+        const message = payload.code.trim();
         
-        // Trim chat history if too long
-        if (currentCode.length > MAX_CODE_LENGTH) {
-            currentCode = currentCode.slice(-MAX_CODE_LENGTH/2);
+        if (message) {
+            const formattedMessage = `${username}: ${message}\n`;
+            
+            // Trim chat history if too long
+            if (currentCode.length > MAX_CODE_LENGTH) {
+                currentCode = currentCode.slice(-MAX_CODE_LENGTH/2);
+            }
+            
+            // Update current code
+            currentCode += formattedMessage;
+            
+            // Broadcast only the new message
+            socket.broadcast.emit('code:broadcast', {
+                code: formattedMessage,
+                username: username,
+                isNewMessage: true
+            });
         }
-        
-        // Send only the new message instead of entire chat history
-        socket.broadcast.emit('code:broadcast', { 
-            code: formattedMessage,
-            username: username,
-            isNewMessage: true // Flag to indicate this is a new message
-        });
-
-        // Append new message to current code
-        currentCode = currentCode + formattedMessage;
     });
 
     socket.on('disconnect', () => {
         const username = users.get(socket.id);
         if (username) {
             const leftMessage = `\n${username} left the chat\n`;
-            currentCode = currentCode + leftMessage;
-            io.emit('code:broadcast', { 
+            currentCode += leftMessage;
+            io.emit('code:broadcast', {
                 code: leftMessage,
                 username: 'System',
                 isNewMessage: true
@@ -90,27 +87,29 @@ io.on('connection', (socket) => {
     });
 });
 
-// Update the snapshot creation endpoint
+// Create snapshot
 app.post('/api/snapshot', (req, res) => {
     const id = Math.random().toString(36).slice(2, 8);
-    const name = req.body.name || `Snapshot ${id}`;
+    const name = req.body.name || `Chat ${new Date().toLocaleString()}`;
     const creator = req.body.username || 'Anonymous';
-
-    // Save the entire chat history in the snapshot
-    snapshots.set(id, { 
-        code: currentCode, // This contains the full chat history
-        name, 
-        creator 
+    
+    snapshots.set(id, {
+        code: currentCode,
+        name,
+        creator,
+        timestamp: new Date().toISOString()
     });
     
     const url = `/s/${id}`;
-    io.emit('snapshot:created', { id, name, url, creator });
+    const snapshotData = { id, name, url, creator };
+    
+    io.emit('snapshot:created', snapshotData);
     console.log('Chat snapshot saved:', id, name, url);
-
-    return res.json({ id, name, url, creator });
+    
+    return res.json(snapshotData);
 });
 
-// Update the snapshot viewer route to display chat history nicely
+// View snapshot
 app.get('/s/:id', (req, res) => {
     const id = req.params.id;
     const snapshot = snapshots.get(id);
@@ -120,29 +119,41 @@ app.get('/s/:id', (req, res) => {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Chat Snapshot: ${snapshot.name}</title>
+                <title>Chat: ${snapshot.name}</title>
                 <meta charset="UTF-8" />
                 <style>
-                    body { font-family: monospace; background: #222; color: #eee; padding: 2rem; }
+                    body { 
+                        font-family: monospace; 
+                        background: #222; 
+                        color: #eee; 
+                        padding: 2rem;
+                        line-height: 1.6;
+                    }
                     .chat { 
                         background: #111; 
                         padding: 1rem; 
                         border-radius: 8px; 
                         white-space: pre-wrap;
-                        line-height: 1.5;
                     }
-                    .meta { color: #888; font-size: 0.9em; margin-bottom: 1rem; }
+                    .meta { 
+                        color: #888; 
+                        font-size: 0.9em; 
+                        margin-bottom: 1rem; 
+                    }
                 </style>
             </head>
             <body>
                 <h2>${snapshot.name}</h2>
-                <div class="meta">Saved by: ${snapshot.creator}</div>
+                <div class="meta">
+                    Saved by: ${snapshot.creator}<br>
+                    Time: ${new Date(snapshot.timestamp).toLocaleString()}
+                </div>
                 <div class="chat">${escapeHtml(snapshot.code)}</div>
             </body>
             </html>
         `);
     } else {
-        res.status(404).send('Snapshot not found');
+        res.status(404).send('Chat snapshot not found');
     }
 });
 
