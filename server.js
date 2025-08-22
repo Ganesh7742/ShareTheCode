@@ -3,6 +3,7 @@ const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +17,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 let currentCode = '';
 const snapshots = new Map(); // Map of id -> { code, name }
+const SNAPSHOT_FILE = path.join(__dirname, 'snapshots.json');
+
+// Load snapshots from file if it exists
+if (fs.existsSync(SNAPSHOT_FILE)) {
+  const data = JSON.parse(fs.readFileSync(SNAPSHOT_FILE, 'utf-8'));
+  for (const [id, snapshot] of Object.entries(data)) {
+    snapshots.set(id, snapshot);
+  }
+}
 
 io.on('connection', (socket) => {
 	console.log('Client connected', socket.id);
@@ -52,6 +62,8 @@ app.post('/api/snapshot', (req, res) => {
 	const id = Math.random().toString(36).slice(2, 8);
 	const name = req.body.name || `Snapshot ${id}`;
 	snapshots.set(id, { code: currentCode, name: name });
+	// Save to file
+	fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(Object.fromEntries(snapshots)), 'utf-8');
 	const baseUrl = process.env.RAILWAY_STATIC_URL || `${req.protocol}://${req.get('host')}`;
 	const url = `${baseUrl}/s/${id}`;
 	
@@ -79,6 +91,8 @@ app.delete('/api/snapshot/:id', (req, res) => {
 		return res.status(404).json({ error: 'Not found' });
 	}
 	snapshots.delete(id);
+	// Save to file
+	fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(Object.fromEntries(snapshots)), 'utf-8');
 	
 	// Broadcast the deletion to all connected clients
 	io.emit('snapshot:deleted', { id });
