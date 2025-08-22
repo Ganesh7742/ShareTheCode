@@ -90,25 +90,27 @@ io.on('connection', (socket) => {
     });
 });
 
-// Create snapshot
+// Update the snapshot creation endpoint
 app.post('/api/snapshot', (req, res) => {
-    // Clear old snapshots if limit reached
-    if (snapshots.size >= MAX_SNAPSHOTS) {
-        const oldestId = snapshots.keys().next().value;
-        snapshots.delete(oldestId);
-    }
-
     const id = Math.random().toString(36).slice(2, 8);
     const name = req.body.name || `Snapshot ${id}`;
     const creator = req.body.username || 'Anonymous';
-    snapshots.set(id, { code: currentCode, name, creator });
+
+    // Save the entire chat history in the snapshot
+    snapshots.set(id, { 
+        code: currentCode, // This contains the full chat history
+        name, 
+        creator 
+    });
     
     const url = `/s/${id}`;
     io.emit('snapshot:created', { id, name, url, creator });
+    console.log('Chat snapshot saved:', id, name, url);
+
     return res.json({ id, name, url, creator });
 });
 
-// Get snapshot
+// Update the snapshot viewer route to display chat history nicely
 app.get('/s/:id', (req, res) => {
     const id = req.params.id;
     const snapshot = snapshots.get(id);
@@ -118,18 +120,24 @@ app.get('/s/:id', (req, res) => {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Snapshot: ${snapshot.name}</title>
+                <title>Chat Snapshot: ${snapshot.name}</title>
                 <meta charset="UTF-8" />
                 <style>
                     body { font-family: monospace; background: #222; color: #eee; padding: 2rem; }
-                    pre { background: #111; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+                    .chat { 
+                        background: #111; 
+                        padding: 1rem; 
+                        border-radius: 8px; 
+                        white-space: pre-wrap;
+                        line-height: 1.5;
+                    }
                     .meta { color: #888; font-size: 0.9em; margin-bottom: 1rem; }
                 </style>
             </head>
             <body>
                 <h2>${snapshot.name}</h2>
-                <div class="meta">Created by: ${snapshot.creator}</div>
-                <pre>${escapeHtml(snapshot.code)}</pre>
+                <div class="meta">Saved by: ${snapshot.creator}</div>
+                <div class="chat">${escapeHtml(snapshot.code)}</div>
             </body>
             </html>
         `);
