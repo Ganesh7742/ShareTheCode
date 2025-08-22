@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -22,8 +24,12 @@ let currentCode = '';
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Update MongoDB connection string with your actual cluster ID
-const MONGO_URL = 'mongodb+srv://ganeshnamani01:ganesh%401409@cluster0.sstpukz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+// Replace hardcoded MongoDB URL with environment variable
+const MONGO_URL = process.env.MONGODB_URI;
+if (!MONGO_URL) {
+  console.error('MONGODB_URI environment variable is required');
+  process.exit(1);
+}
 
 const DB_NAME = 'sharethecode';
 const COLLECTION = 'snapshots';
@@ -121,36 +127,50 @@ app.delete('/api/snapshot/:id', async (req, res) => {
   return res.json({ success: true });
 });
 
-// Serve snapshot viewer page
-app.get('/s/:id', async (req, res) => {
-  const id = req.params.id;
-  const snapshot = await snapshotsCollection.findOne({ _id: id });
-  if (snapshot) {
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Snapshot: ${snapshot.name}</title>
-        <meta charset="UTF-8" />
-        <style>
-          body { font-family: monospace; background: #222; color: #eee; padding: 2rem; }
-          pre { background: #111; padding: 1rem; border-radius: 8px; overflow-x: auto; }
-        </style>
-      </head>
-      <body>
-        <h2>${snapshot.name}</h2>
-        <pre>${escapeHtml(snapshot.code)}</pre>
-      </body>
-      </html>
-    `);
-  } else {
-    res.status(404).send('Snapshot not found');
+// Add this route BEFORE all other routes
+app.get('*', (req, res, next) => {
+  // Remove Railway URL prefix if present
+  if (req.url.includes('web-production-')) {
+    const newUrl = req.url.replace(/.*web-production-[^/]+\.up\.railway\.app/, '');
+    return res.redirect(newUrl);
   }
+  next();
 });
 
-// Add this before your other routes
-app.get('/web-production-*/:type/:id', (req, res) => {
-  res.redirect(`/${req.params.type}/${req.params.id}`);
+// Update the snapshot viewer route
+app.get('/s/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    console.log('Looking for snapshot:', id); // Debug log
+    
+    const snapshot = await snapshotsCollection.findOne({ _id: id });
+    console.log('Found snapshot:', !!snapshot); // Debug log
+    
+    if (snapshot) {
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Snapshot: ${snapshot.name}</title>
+          <meta charset="UTF-8" />
+          <style>
+            body { font-family: monospace; background: #222; color: #eee; padding: 2rem; }
+            pre { background: #111; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+          </style>
+        </head>
+        <body>
+          <h2>${snapshot.name}</h2>
+          <pre>${escapeHtml(snapshot.code)}</pre>
+        </body>
+        </html>
+      `);
+    } else {
+      res.status(404).send('Snapshot not found');
+    }
+  } catch (error) {
+    console.error('Error fetching snapshot:', error);
+    res.status(500).send('Server error');
+  }
 });
 
 // Helper to escape HTML special chars
