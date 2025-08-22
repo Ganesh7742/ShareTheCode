@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Update MongoDB connection string with your actual cluster ID
-const MONGO_URL = 'mongodb+srv://ganeshnamani01:ganesh%402409@cluster0.sstpukz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URL = 'mongodb+srv://ganeshnamani01:ganesh%401409@cluster0.sstpukz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 const DB_NAME = 'sharethecode';
 const COLLECTION = 'snapshots';
@@ -45,7 +45,10 @@ MongoClient.connect(MONGO_URL, { useUnifiedTopology: true })
 
 // Add a helper function to get base URL
 function getBaseUrl(req) {
-  return process.env.RAILWAY_STATIC_URL || `${req.protocol}://${req.get('host')}`;
+  if (process.env.RAILWAY_STATIC_URL) {
+    return process.env.RAILWAY_STATIC_URL.replace(/\/$/, ''); // Remove trailing slash
+  }
+  return `${req.protocol}://${req.get('host')}`;
 }
 
 // Update the socket connection code to use MongoDB instead of snapshots Map
@@ -59,7 +62,7 @@ io.on('connection', async (socket) => {
     const formattedSnapshots = existingSnapshots.map(snapshot => ({
         id: snapshot._id,
         name: snapshot.name,
-        url: `${baseUrl}/s/${snapshot._id}` // Full URL
+        url: `/s/${snapshot._id}` // Use short URL format
     }));
     
     if (formattedSnapshots.length > 0) {
@@ -87,12 +90,13 @@ app.post('/api/snapshot', async (req, res) => {
   const snapshot = { _id: id, code: currentCode, name: name };
   await snapshotsCollection.insertOne(snapshot);
   
-  const url = `${getBaseUrl(req)}/s/${id}`; // Full URL
+  // Change URL format
+  const shortUrl = `/s/${id}`;
 
-  io.emit('snapshot:created', { id, name, url });
-  console.log('Snapshot created:', id, name, url);
+  io.emit('snapshot:created', { id, name, url: shortUrl });
+  console.log('Snapshot created:', id, name, shortUrl);
 
-  return res.json({ id, name, url });
+  return res.json({ id, name, url: shortUrl });
 });
 
 // Fetch snapshot JSON
@@ -142,6 +146,11 @@ app.get('/s/:id', async (req, res) => {
   } else {
     res.status(404).send('Snapshot not found');
   }
+});
+
+// Add this before your other routes
+app.get('/web-production-*/:type/:id', (req, res) => {
+  res.redirect(`/${req.params.type}/${req.params.id}`);
 });
 
 // Helper to escape HTML special chars
