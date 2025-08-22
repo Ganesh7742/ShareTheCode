@@ -4,6 +4,7 @@ const cors = require('cors');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,16 +17,24 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 let currentCode = '';
-const snapshots = new Map(); // Map of id -> { code, name }
-const SNAPSHOT_FILE = path.join(__dirname, 'snapshots.json');
+const MONGO_URL = process.env.MONGO_URL || 'mongodb+srv://ganeshnamani01:ganesh%401409@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority';
+const DB_NAME = 'sharethecode';
+const COLLECTION = 'snapshots';
+let db, snapshotsCollection;
 
-// Load snapshots from file if it exists
-if (fs.existsSync(SNAPSHOT_FILE)) {
-  const data = JSON.parse(fs.readFileSync(SNAPSHOT_FILE, 'utf-8'));
-  for (const [id, snapshot] of Object.entries(data)) {
-    snapshots.set(id, snapshot);
-  }
-}
+// Connect to MongoDB before starting the server
+MongoClient.connect(MONGO_URL, { useUnifiedTopology: true })
+  .then(client => {
+    db = client.db(DB_NAME);
+    snapshotsCollection = db.collection(COLLECTION);
+    server.listen(PORT, HOST, () => {
+      console.log(`Server listening on http://${HOST}:${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('Failed to connect to MongoDB', err);
+    process.exit(1);
+  });
 
 io.on('connection', (socket) => {
 	console.log('Client connected', socket.id);
@@ -58,53 +67,46 @@ io.on('connection', (socket) => {
 });
 
 // Create a snapshot of currentCode and return a shareable URL
-app.post('/api/snapshot', (req, res) => {
-	const id = Math.random().toString(36).slice(2, 8);
-	const name = req.body.name || `Snapshot ${id}`;
-	snapshots.set(id, { code: currentCode, name: name });
-	// Save to file
-	fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(Object.fromEntries(snapshots)), 'utf-8');
-	const baseUrl = process.env.RAILWAY_STATIC_URL || `${req.protocol}://${req.get('host')}`;
-	const url = `${baseUrl}/s/${id}`;
-	
-	// Broadcast the new snapshot to all connected clients
-	io.emit('snapshot:created', { id, name, url });
-	console.log('Snapshot created:', id, name, 'broadcasting to all clients');
-	
-	return res.json({ id, name, url });
+app.post('/api/snapshot', async (req, res) => {
+  const id = Math.random().toString(36).slice(2, 8);
+  const name = req.body.name || `Snapshot ${id}`;
+  const snapshot = { _id: id, code: currentCode, name: name };
+  await snapshotsCollection.insertOne(snapshot);
+  const baseUrl = process.env.RAILWAY_STATIC_URL || `${req.protocol}://${req.get('host')}`;
+  const url = `${baseUrl}/s/${id}`;
+
+  io.emit('snapshot:created', { id, name, url });
+  console.log('Snapshot created:', id, name, 'broadcasting to all clients');
+
+  return res.json({ id, name, url });
 });
 
 // Fetch snapshot JSON
-app.get('/api/snapshot/:id', (req, res) => {
-	const { id } = req.params;
-	if (!snapshots.has(id)) {
-		return res.status(404).json({ error: 'Not found' });
-	}
-	const snapshot = snapshots.get(id);
-	return res.json({ id, code: snapshot.code, name: snapshot.name });
+app.get('/api/snapshot/:id', async (req, res) => {
+  const { id } = req.params;
+  const snapshot = await snapshotsCollection.findOne({ _id: id });
+  if (!snapshot) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  return res.json({ id, code: snapshot.code, name: snapshot.name });
 });
 
 // Delete snapshot
-app.delete('/api/snapshot/:id', (req, res) => {
-	const { id } = req.params;
-	if (!snapshots.has(id)) {
-		return res.status(404).json({ error: 'Not found' });
-	}
-	snapshots.delete(id);
-	// Save to file
-	fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(Object.fromEntries(snapshots)), 'utf-8');
-	
-	// Broadcast the deletion to all connected clients
-	io.emit('snapshot:deleted', { id });
-	console.log('Snapshot deleted:', id, 'broadcasting to all clients');
-	
-	return res.json({ success: true });
+app.delete('/api/snapshot/:id', async (req, res) => {
+  const { id } = req.params;
+  const result = await snapshotsCollection.deleteOne({ _id: id });
+  if (result.deletedCount === 0) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  io.emit('snapshot:deleted', { id });
+  console.log('Snapshot deleted:', id, 'broadcasting to all clients');
+  return res.json({ success: true });
 });
 
 // Serve snapshot viewer page
-app.get('/s/:id', (req, res) => {
+app.get('/s/:id', async (req, res) => {
   const id = req.params.id;
-  const snapshot = snapshots.get(id);
+  const snapshot = await snapshotsCollection.findOne({ _id: id });
   if (snapshot) {
     res.send(`
       <!DOCTYPE html>
@@ -143,8 +145,5 @@ function escapeHtml(str) {
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
-server.listen(PORT, HOST, () => {
-	console.log(`Server listening on http://${HOST}:${PORT}`);
-});
 
 
