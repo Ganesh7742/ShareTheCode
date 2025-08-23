@@ -191,29 +191,72 @@
 
         .saved-codes-list li {
             background: #e0e0e0;
-            padding: 10px 15px;
-            margin-bottom: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
             border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: block;
             font-size: 0.9rem;
             color: #333;
+            border-left: 4px solid #3498db;
         }
 
+        .saved-code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .saved-code-info {
+            flex: 1;
+        }
+        
         .saved-codes-list li .code-title {
             font-weight: 600;
             color: #2c3e50;
+            font-size: 1rem;
+            margin-bottom: 4px;
         }
 
         .saved-codes-list li .code-date {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        
+        .code-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            color: #495057;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        
+        .code-preview::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .code-preview::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        .code-preview::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 2px;
         }
 
         .saved-codes-list li .code-actions {
             display: flex;
-            gap: 10px;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         .saved-codes-list li .code-actions button {
@@ -294,6 +337,370 @@
             word-wrap: break-word;
         }
 
+        /* Username Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .modal-header {
+            text-align: center;
+            padding: 30px 30px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .modal-header h2 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .modal-header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .modal-body {
+            padding: 30px;
+        }
+        
+        #usernameInput {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+        
+        #usernameInput:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .join-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .join-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .join-btn:active {
+            transform: translateY(0);
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        /* Section Navigation Styles */
+        .section-navigation {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 15px 25px;
+            border: none;
+            background: #f8f9fa;
+            color: #7f8c8d;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .nav-tab:last-child {
+            border-right: none;
+        }
+        
+        .nav-tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .nav-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        /* Section Panel Styles */
+        .section-panel {
+            display: none;
+        }
+        
+        .section-panel.active {
+            display: block;
+        }
+        
+        .section-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .section-title {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .section-description {
+            color: #6c757d;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        /* Main Layout Styles */
+        .main-layout {
+            display: block;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .current-user {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        /* Chat Panel Styles */
+        .chat-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .chat-header {
+            background: #9b59b6;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .online-users {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 0;
+        }
+        
+        .user-message {
+            background: white;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border-left: 3px solid #9b59b6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .message-username {
+            font-weight: 600;
+            color: #9b59b6;
+            font-size: 0.85rem;
+        }
+        
+        .message-time {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+        }
+        
+        .message-content {
+            color: #2c3e50;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        
+        .system-message {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.85rem;
+            font-style: italic;
+            background: #e8f4fd;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+        
+        .welcome-message {
+            margin-bottom: 15px;
+        }
+        
+        .chat-input-container {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        
+        #chatInput {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        
+        #chatInput:focus {
+            border-color: #9b59b6;
+            box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.1);
+        }
+        
+        .send-btn {
+            background: #9b59b6;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .send-btn:hover {
+            background: #8e44ad;
+        }
+        
+        .send-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Custom scrollbar for chat */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+        
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+        
+        @media (max-width: 968px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .chat-container {
+                position: relative;
+                top: auto;
+                height: 400px;
+            }
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -307,10 +714,48 @@
                 min-height: 400px;
                 font-size: 13px;
             }
+            
+            .modal-content {
+                width: 95%;
+            }
+            
+            .modal-header, .modal-body {
+                padding: 20px;
+            }
+            
+            .editor-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .user-info {
+                justify-content: center;
+            }
+            
+            .save-section {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Username Modal -->
+    <div id="usernameModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🚀 Join Real-Time Code Sharing</h2>
+                <p>Enter your name to start collaborating with others!</p>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="usernameInput" placeholder="Enter your name..." maxlength="20" />
+                <button id="joinBtn" class="join-btn">Join Session</button>
+                <div id="usernameError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>🚀 Real-Time Code Sharing</h1>
@@ -320,14 +765,31 @@
             </div>
         </div>
 
-        <div class="editor-container">
-            <div class="editor-header">
-                <div class="status">
-                    <div class="status-indicator" id="statusIndicator"></div>
-                    <span class="status-text" id="statusText">Connecting...</span>
+        <!-- Section Navigation -->
+        <div class="section-navigation">
+            <button id="codeTabBtn" class="nav-tab active">📝 Code Sharing</button>
+            <button id="chatTabBtn" class="nav-tab">💬 Live Chat</button>
+        </div>
+
+        <div class="main-layout">
+            <!-- CODE SHARING SECTION -->
+            <div id="codeSection" class="section-panel active">
+                <div class="section-header">
+                    <h2 class="section-title">📝 Real-Time Code Sharing</h2>
+                    <p class="section-description">Write code together in real-time with your team</p>
                 </div>
-                <div class="connected-count" id="connectedCount">0 online</div>
-            </div>
+                
+                <div class="editor-container">
+                    <div class="editor-header">
+                        <div class="status">
+                            <div class="status-indicator" id="statusIndicator"></div>
+                            <span class="status-text" id="statusText">Connecting...</span>
+                        </div>
+                        <div class="user-info">
+                            <span id="currentUser" class="current-user"></span>
+                            <div class="connected-count" id="connectedCount">0 online</div>
+                        </div>
+                    </div>
             
             <textarea 
                 id="codeEditor" 
@@ -358,8 +820,42 @@
                 </div>
             </div>
             
-            <div class="info-bar">
-                💡 <strong>Tip:</strong> Just start typing! Your code will automatically sync with everyone else in real-time.
+                    <div class="info-bar">
+                        💡 <strong>Tip:</strong> Just start typing! Your code will automatically sync with everyone else in real-time.
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIVE CHAT SECTION -->
+            <div id="chatSection" class="section-panel">
+                <div class="section-header">
+                    <h2 class="section-title">💬 Live Chat</h2>
+                    <p class="section-description">Chat with your team while coding together</p>
+                </div>
+                
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <div class="chat-title">
+                            <span>💬 Live Chat</span>
+                        </div>
+                        <div class="online-users">
+                            <span id="onlineUsersList">0 users online</span>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="welcome-message">
+                            <div class="system-message">
+                                Welcome to the chat! Start collaborating with others.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-container">
+                        <input type="text" id="chatInput" placeholder="Type a message..." maxlength="500" />
+                        <button id="sendBtn" class="send-btn">Send</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -416,6 +912,17 @@
             const loadedCodeTitle = document.getElementById('loadedCodeTitle');
             const loadedCodeContent = document.getElementById('loadedCodeContent');
             const closeViewerBtn = document.getElementById('closeViewer');
+            
+            // Username and chat elements
+            const usernameModal = document.getElementById('usernameModal');
+            const usernameInput = document.getElementById('usernameInput');
+            const joinBtn = document.getElementById('joinBtn');
+            const usernameError = document.getElementById('usernameError');
+            const currentUser = document.getElementById('currentUser');
+            const chatMessages = document.getElementById('chatMessages');
+            const chatInput = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const onlineUsersList = document.getElementById('onlineUsersList');
             
             // Debug: Check if elements are found
             console.log('Elements found:', {
@@ -747,12 +1254,32 @@
                 codes.forEach(code => {
                     const li = document.createElement('li');
                     li.setAttribute('data-id', code.id);
+                    
+                    // Create preview of code (first 200 characters or 8 lines, whichever comes first)
+                    const codeLines = code.code.split('\n');
+                    const previewLines = codeLines.slice(0, 8); // Show max 8 lines
+                    let codePreview = previewLines.join('\n');
+                    if (codePreview.length > 200) {
+                        codePreview = codePreview.substring(0, 200) + '...';
+                    } else if (codeLines.length > 8) {
+                        codePreview += '\n...';
+                    }
+                    
+                    // Escape code for safe HTML insertion
+                    const escapedCode = code.code.replace(/'/g, "\\'")
+                                                 .replace(/"/g, '&quot;')
+                                                 .replace(/</g, '&lt;')
+                                                 .replace(/>/g, '&gt;');
+                    const escapedTitle = code.title.replace(/'/g, "\\'")
+                                                   .replace(/"/g, '&quot;');
+                    
                     li.innerHTML = `
                         <div class="code-title">${code.title}</div>
-                        <div class="code-date">Shared on: ${new Date(code.timestamp).toLocaleDateString()}</div>
+                        <div class="code-date">Shared on: ${new Date(code.timestamp).toLocaleDateString()} • ${code.code.split('\n').length} line${code.code.split('\n').length !== 1 ? 's' : ''}</div>
+                        <div class="code-preview">${codePreview}</div>
                         <div class="code-actions">
-                            <button onclick="window.loadCode('${code.code.replace(/'/g, "\\'")}', '${code.title.replace(/'/g, "\\'")}')">Load</button>
-                            <button onclick="window.deleteCode('${code.id}')">Delete</button>
+                            <button onclick="window.loadCode('${escapedCode}', '${escapedTitle}')">📖 View Full Code</button>
+                            <button onclick="window.deleteCode('${code.id}')">🗑️ Delete</button>
                         </div>
                     `;
                     savedCodesList.appendChild(li);
@@ -817,6 +1344,261 @@
                     }
                 });
             }
+            
+            // Username modal functionality
+            let currentUsername = '';
+            let isLoggedIn = false;
+            
+            function showUsernameError(message) {
+                if (usernameError) {
+                    usernameError.textContent = message;
+                    setTimeout(() => {
+                        if (usernameError) {
+                            usernameError.textContent = '';
+                        }
+                    }, 3000);
+                }
+            }
+            
+            function hideModal() {
+                if (usernameModal) {
+                    usernameModal.classList.add('hidden');
+                }
+            }
+            
+            function joinSession() {
+                const username = usernameInput.value.trim();
+                
+                if (!username) {
+                    showUsernameError('Please enter a username');
+                    return;
+                }
+                
+                if (username.length < 2) {
+                    showUsernameError('Username must be at least 2 characters');
+                    return;
+                }
+                
+                if (username.length > 20) {
+                    showUsernameError('Username must be less than 20 characters');
+                    return;
+                }
+                
+                // Save username and join
+                currentUsername = username;
+                isLoggedIn = true;
+                
+                // Update UI
+                if (currentUser) {
+                    currentUser.textContent = `👤 ${currentUsername}`;
+                }
+                
+                // Join the session with username
+                socket.emit('user:join', { username: currentUsername });
+                
+                // Hide modal
+                hideModal();
+                
+                console.log('Joined session as:', currentUsername);
+            }
+            
+            // Username modal event handlers
+            if (joinBtn) {
+                joinBtn.addEventListener('click', joinSession);
+            }
+            
+            if (usernameInput) {
+                usernameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        joinSession();
+                    }
+                });
+                
+                // Focus username input when modal is shown
+                usernameInput.focus();
+            }
+            
+            // Chat functionality
+            function formatTime(timestamp) {
+                const date = new Date(timestamp);
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            function addChatMessage(message) {
+                if (!chatMessages) return;
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'chat-message';
+                
+                if (message.type === 'system') {
+                    messageDiv.innerHTML = `<div class="system-message">${escapeHtml(message.message)}</div>`;
+                } else if (message.type === 'user') {
+                    messageDiv.innerHTML = `
+                        <div class="user-message">
+                            <div class="message-header">
+                                <span class="message-username">${escapeHtml(message.username)}</span>
+                                <span class="message-time">${formatTime(message.timestamp)}</span>
+                            </div>
+                            <div class="message-content">${escapeHtml(message.message)}</div>
+                        </div>
+                    `;
+                }
+                
+                chatMessages.appendChild(messageDiv);
+                
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            function sendChatMessage() {
+                if (!isLoggedIn || !chatInput) return;
+                
+                const message = chatInput.value.trim();
+                if (!message) return;
+                
+                // Send message to server
+                socket.emit('chat:send', { message: message });
+                
+                // Clear input
+                chatInput.value = '';
+                
+                console.log('Chat message sent:', message);
+            }
+            
+            // Chat event handlers
+            if (sendBtn) {
+                sendBtn.addEventListener('click', sendChatMessage);
+            }
+            
+            if (chatInput) {
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        sendChatMessage();
+                    }
+                });
+            }
+            
+            // Socket event handlers for username and chat
+            socket.on('users:update', ({ users }) => {
+                console.log('Users updated:', users);
+                
+                // Update connected count
+                const userCount = users.length;
+                if (connectedCount) {
+                    connectedCount.textContent = `${userCount} online`;
+                }
+                
+                if (onlineUsersList) {
+                    onlineUsersList.textContent = `${userCount} user${userCount !== 1 ? 's' : ''} online`;
+                }
+            });
+            
+            socket.on('chat:message', (message) => {
+                console.log('Chat message received:', message);
+                addChatMessage(message);
+            });
+            
+            socket.on('chat:history', ({ messages }) => {
+                console.log('Chat history received:', messages.length, 'messages');
+                
+                // Clear welcome message first
+                if (chatMessages) {
+                    chatMessages.innerHTML = '';
+                }
+                
+                // Add all historical messages
+                messages.forEach(message => {
+                    addChatMessage(message);
+                });
+            });
+            
+            // Override the existing connection handlers to work with login system
+            socket.off('connect');
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                if (statusIndicator) statusIndicator.classList.add('connected');
+                if (statusText) statusText.textContent = 'Connected - Please enter username';
+                if (debugInfo) {
+                    debugInfo.innerHTML = '<strong>Debug Info:</strong> ✅ Connected to server! Please enter username to join.';
+                }
+            });
+            
+            // Section Navigation Functionality
+            const codeTabBtn = document.getElementById('codeTabBtn');
+            const chatTabBtn = document.getElementById('chatTabBtn');
+            const codeSection = document.getElementById('codeSection');
+            const chatSection = document.getElementById('chatSection');
+            
+            function switchToSection(sectionName) {
+                console.log('Switching to section:', sectionName);
+                
+                if (sectionName === 'code') {
+                    // Show code section
+                    if (codeSection) codeSection.classList.add('active');
+                    if (chatSection) chatSection.classList.remove('active');
+                    
+                    // Update tab buttons
+                    if (codeTabBtn) codeTabBtn.classList.add('active');
+                    if (chatTabBtn) chatTabBtn.classList.remove('active');
+                    
+                    // Focus the code editor if available
+                    if (codeEditor) {
+                        setTimeout(() => codeEditor.focus(), 100);
+                    }
+                } else if (sectionName === 'chat') {
+                    // Show chat section
+                    if (chatSection) chatSection.classList.add('active');
+                    if (codeSection) codeSection.classList.remove('active');
+                    
+                    // Update tab buttons
+                    if (chatTabBtn) chatTabBtn.classList.add('active');
+                    if (codeTabBtn) codeTabBtn.classList.remove('active');
+                    
+                    // Focus the chat input if available and user is logged in
+                    if (chatInput && isLoggedIn) {
+                        setTimeout(() => chatInput.focus(), 100);
+                    }
+                    
+                    // Scroll chat to bottom if there are messages
+                    if (chatMessages) {
+                        setTimeout(() => {
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }, 100);
+                    }
+                }
+            }
+            
+            // Add event listeners for tab buttons
+            if (codeTabBtn) {
+                codeTabBtn.addEventListener('click', () => switchToSection('code'));
+            }
+            
+            if (chatTabBtn) {
+                chatTabBtn.addEventListener('click', () => switchToSection('chat'));
+            }
+            
+            // Keyboard shortcuts for section switching
+            document.addEventListener('keydown', (e) => {
+                // Alt + 1 for code section, Alt + 2 for chat section
+                if (e.altKey && !e.ctrlKey && !e.shiftKey) {
+                    if (e.key === '1' || e.key === '1') {
+                        e.preventDefault();
+                        switchToSection('code');
+                    } else if (e.key === '2' || e.key === '2') {
+                        e.preventDefault();
+                        switchToSection('chat');
+                    }
+                }
+            });
+            
+            // Initialize with code section active by default
+            switchToSection('code');
         }
     </script>
 </body>

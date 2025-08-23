@@ -26,26 +26,60 @@ app.get('/test', (req, res) => {
 });
 
 let currentCode = '';
-let connectedUsers = 0;
+let connectedUsers = new Map(); // Store users with their usernames
 let savedCodes = []; // Store saved codes for sharing
+let chatMessages = []; // Store chat messages
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
 
 io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id, 'Total users:', connectedUsers + 1);
-    connectedUsers++;
+    console.log('Client connected:', socket.id);
     
-    // Send current code to new client
-    socket.emit('init', { code: currentCode });
-    
-    // Send saved codes to new client
-    if (savedCodes.length > 0) {
-        socket.emit('savedCodes:init', { savedCodes });
-    }
-    
-    // Broadcast updated user count to all clients
-    io.emit('user:connected');
+    // Handle user joining with username
+    socket.on('user:join', (payload) => {
+        if (!payload || !payload.username) return;
+        
+        const username = payload.username.trim();
+        if (!username) return;
+        
+        // Store user info
+        connectedUsers.set(socket.id, {
+            id: socket.id,
+            username: username,
+            joinedAt: new Date().toISOString()
+        });
+        
+        console.log('User joined:', username, 'ID:', socket.id);
+        
+        // Send current code to new client
+        socket.emit('init', { code: currentCode });
+        
+        // Send saved codes to new client
+        if (savedCodes.length > 0) {
+            socket.emit('savedCodes:init', { savedCodes });
+        }
+        
+        // Send recent chat messages to new client
+        if (chatMessages.length > 0) {
+            socket.emit('chat:history', { messages: chatMessages.slice(-50) }); // Send last 50 messages
+        }
+        
+        // Broadcast user list to all clients
+        const userList = Array.from(connectedUsers.values());
+        io.emit('users:update', { users: userList });
+        
+        // Broadcast join message to all clients
+        const joinMessage = {
+            id: Date.now().toString(),
+            type: 'system',
+            message: `${username} joined the session`,
+            timestamp: new Date().toISOString()
+        };
+        
+        chatMessages.push(joinMessage);
+        io.emit('chat:message', joinMessage);
+    });
 
     // Handle code updates
     socket.on('code:update', (payload) => {
@@ -97,11 +131,63 @@ io.on('connection', (socket) => {
             io.emit('code:deleted', { id: payload.id });
         }
     });
+    
+    // Handle chat messages
+    socket.on('chat:send', (payload) => {
+        if (!payload || !payload.message) return;
+        
+        const user = connectedUsers.get(socket.id);
+        if (!user) return; // User must be logged in to send messages
+        
+        const message = payload.message.trim();
+        if (!message) return;
+        
+        const chatMessage = {
+            id: Date.now().toString(),
+            type: 'user',
+            username: user.username,
+            message: message,
+            timestamp: new Date().toISOString()
+        };
+        
+        chatMessages.push(chatMessage);
+        
+        // Keep only last 100 messages to prevent memory issues
+        if (chatMessages.length > 100) {
+            chatMessages = chatMessages.slice(-100);
+        }
+        
+        console.log('Chat message from', user.username + ':', message);
+        
+        // Broadcast message to all clients
+        io.emit('chat:message', chatMessage);
+    });
 
     socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id, 'Total users:', connectedUsers - 1);
-        connectedUsers = Math.max(0, connectedUsers - 1);
-        io.emit('user:disconnected');
+        const user = connectedUsers.get(socket.id);
+        if (user) {
+            console.log('User disconnected:', user.username, 'ID:', socket.id);
+            
+            // Remove user from connected users
+            connectedUsers.delete(socket.id);
+            
+            // Broadcast leave message to all clients
+            const leaveMessage = {
+                id: Date.now().toString(),
+                type: 'system',
+                message: `${user.username} left the session`,
+                timestamp: new Date().toISOString()
+            };
+            
+            chatMessages.push(leaveMessage);
+            io.emit('chat:message', leaveMessage);
+            
+            // Broadcast updated user list to all clients
+            const userList = Array.from(connectedUsers.values());
+            io.emit('users:update', { users: userList });
+        } else {
+            console.log('Client disconnected:', socket.id);
+        }
     });
 });
 
