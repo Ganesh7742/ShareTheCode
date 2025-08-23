@@ -146,6 +146,7 @@ io.on('connection', (socket) => {
             id: Date.now().toString(),
             type: 'user',
             username: user.username,
+            userId: socket.id, // Add userId for deletion permission check
             message: message,
             timestamp: new Date().toISOString()
         };
@@ -161,6 +162,37 @@ io.on('connection', (socket) => {
         
         // Broadcast message to all clients
         io.emit('chat:message', chatMessage);
+    });
+    
+    // Handle chat message deletion
+    socket.on('chat:delete', (payload) => {
+        if (!payload || !payload.messageId) return;
+        
+        const user = connectedUsers.get(socket.id);
+        if (!user) return; // User must be logged in to delete messages
+        
+        // Find the message to delete
+        const messageIndex = chatMessages.findIndex(msg => 
+            msg.id === payload.messageId && msg.userId === socket.id
+        );
+        
+        if (messageIndex !== -1) {
+            const deletedMessage = chatMessages[messageIndex];
+            chatMessages.splice(messageIndex, 1);
+            
+            console.log('Message deleted by', user.username, 'message ID:', payload.messageId);
+            
+            // Broadcast message deletion to all clients
+            io.emit('chat:messageDeleted', { 
+                messageId: payload.messageId,
+                deletedBy: user.username 
+            });
+        } else {
+            // Message not found or user doesn't have permission
+            socket.emit('chat:deleteError', { 
+                error: 'Message not found or you do not have permission to delete this message' 
+            });
+        }
     });
 
     socket.on('disconnect', () => {
