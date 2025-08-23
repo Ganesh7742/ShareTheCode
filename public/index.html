@@ -1397,23 +1397,31 @@
                     codePreview += '\n...';
                 }
                 
-                // Escape code for safe HTML insertion
-                const escapedCode = code.code.replace(/'/g, "\\'")
-                                             .replace(/"/g, '&quot;')
-                                             .replace(/</g, '&lt;')
-                                             .replace(/>/g, '&gt;');
-                const escapedTitle = code.title.replace(/'/g, "\\'")
-                                               .replace(/"/g, '&quot;');
-                
+                // Create the list item with data attributes for safer access
                 li.innerHTML = `
                     <div class="code-title">${code.title}</div>
                     <div class="code-date">Shared on: ${new Date(code.timestamp).toLocaleDateString()} • ${code.code.split('\n').length} line${code.code.split('\n').length !== 1 ? 's' : ''}</div>
                     <div class="code-preview">${codePreview}</div>
                     <div class="code-actions">
-                        <button onclick="window.loadCode('${escapedCode}', '${escapedTitle}')">📖 View Full Code</button>
+                        <button class="view-code-btn" data-code-id="${code.id}">📖 View Full Code</button>
                         <button onclick="window.deleteCode('${code.id}')">🗑️ Delete</button>
                     </div>
                 `;
+                
+                // Store the actual code data on the element
+                li.codeData = {
+                    code: code.code,
+                    title: code.title,
+                    id: code.id
+                };
+                
+                // Add event listener for View Code button
+                const viewCodeBtn = li.querySelector('.view-code-btn');
+                if (viewCodeBtn) {
+                    viewCodeBtn.addEventListener('click', () => {
+                        window.loadCode(code.code, code.title);
+                    });
+                }
                 
                 // Insert the new code at the top of the list (most recent first)
                 savedCodesList.insertBefore(li, savedCodesList.firstChild);
@@ -1591,6 +1599,24 @@
                 }
                 
                 chatMessages.appendChild(messageDiv);
+                
+                // Limit chat messages to 100 - remove oldest if exceeding
+                const MAX_MESSAGES = 100;
+                const messageCount = chatMessages.children.length;
+                
+                if (messageCount > MAX_MESSAGES) {
+                    // Calculate how many messages to remove
+                    const messagesToRemove = messageCount - MAX_MESSAGES;
+                    
+                    // Remove the oldest messages from the beginning
+                    for (let i = 0; i < messagesToRemove; i++) {
+                        if (chatMessages.firstChild) {
+                            chatMessages.removeChild(chatMessages.firstChild);
+                        }
+                    }
+                    
+                    console.log(`Removed ${messagesToRemove} oldest message${messagesToRemove > 1 ? 's' : ''} to maintain limit of ${MAX_MESSAGES}`);
+                }
                 
                 // Scroll to bottom
                 chatMessages.scrollTop = chatMessages.scrollHeight;
