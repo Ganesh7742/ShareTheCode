@@ -1,285 +1,824 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Global Code Board</title>
-	<style>
-		body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
-		textarea { width: 100%; height: 60vh; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; padding: 12px; box-sizing: border-box; }
-		button { padding: 10px 16px; font-size: 14px; cursor: pointer; }
-		#row { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
-		#status { min-height: 1.2em; color: #555; }
-		.snapshot-item { background: #f8f9fa; padding: 8px; margin: 4px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-		.snapshot-link { color: #007bff; text-decoration: none; }
-		.snapshot-link:hover { text-decoration: underline; }
-		#snapshotList {
-			margin-top: 20px;
-			background: #333;
-			padding: 10px;
-			border-radius: 8px;
-			max-height: 200px;
-			overflow-y: auto;
-		}
-		.snapshot-item {
-			background: #444;
-			margin: 5px 0;
-			padding: 10px;
-			border-radius: 4px;
-		}
-		.snapshot-item a {
-			color: #007bff;
-			text-decoration: none;
-		}
-		.snapshot-item a:hover {
-			text-decoration: underline;
-		}
-	</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Code Sharing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .editor-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .editor-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #27ae60;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .code-editor {
+            width: 100%;
+            min-height: 500px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            border: none;
+            outline: none;
+            resize: vertical;
+            background: #fafafa;
+            color: #2c3e50;
+        }
+
+        .code-editor:focus {
+            background: white;
+        }
+
+        .placeholder {
+            color: #bdc3c7;
+        }
+
+        .info-bar {
+            background: #ecf0f1;
+            padding: 15px 20px;
+            border-top: 1px solid #ddd;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .connected-count {
+            background: #3498db;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .save-section {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .save-btn {
+            background: #27ae60;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .save-btn:hover {
+            background: #229954;
+        }
+
+        .save-status {
+            font-size: 0.9rem;
+            color: #27ae60;
+            font-weight: 500;
+        }
+
+        .save-status.error {
+            color: #e74c3c;
+        }
+
+        .code-title-input {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .saved-codes-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .saved-codes-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .saved-codes-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .saved-codes-list li {
+            background: #e0e0e0;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .saved-codes-list li .code-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .saved-codes-list li .code-date {
+            font-size: 0.7rem;
+            color: #7f8c8d;
+        }
+
+        .saved-codes-list li .code-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .saved-codes-list li .code-actions button {
+            background: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+
+        .saved-codes-list li .code-actions button:hover {
+            background: #2980b9;
+        }
+
+        .loaded-code-view {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .loaded-code-view h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .loaded-code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .loaded-code-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: #c0392b;
+        }
+
+        .loaded-code-content {
+            background: #2c3e50;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .code-display {
+            color: #ecf0f1;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .code-editor {
+                min-height: 400px;
+                font-size: 13px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="userModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
-        <div style="background:white; padding:20px; border-radius:8px; width:300px; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
-            <h2>Enter your name</h2>
-            <input type="text" id="username" style="width:100%; padding:8px; margin:10px 0;" placeholder="Your name...">
-            <button onclick="joinChat()" style="width:100%;">Join</button>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Real-Time Code Sharing</h1>
+            <p>Collaborate on code with others in real-time. Everyone sees the same code as you type!</p>
+            <div id="debugInfo" style="background: #e8f4fd; padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 0.9rem;">
+                <strong>Debug Info:</strong> Server is running. Check console for connection details.
+            </div>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-header">
+                <div class="status">
+                    <div class="status-indicator" id="statusIndicator"></div>
+                    <span class="status-text" id="statusText">Connecting...</span>
+                </div>
+                <div class="connected-count" id="connectedCount">0 online</div>
+            </div>
+            
+            <textarea 
+                id="codeEditor" 
+                class="code-editor" 
+                placeholder="Start typing your code here... Everyone will see it in real-time!"
+                spellcheck="false"
+            ></textarea>
+            
+            <div class="save-section">
+                <input type="text" id="codeTitle" placeholder="Enter code title..." class="code-title-input">
+                <button id="saveBtn" class="save-btn">💾 Share Code</button>
+                <span id="saveStatus" class="save-status"></span>
+            </div>
+            
+            <div class="saved-codes-section" id="savedCodesSection" style="display: none;">
+                <h3>📚 Shared Codes</h3>
+                <div id="savedCodesList" class="saved-codes-list"></div>
+            </div>
+            
+            <div class="loaded-code-view" id="loadedCodeView" style="display: none;">
+                <h3>📖 Code Viewer</h3>
+                <div class="loaded-code-header">
+                    <span id="loadedCodeTitle" class="loaded-code-title"></span>
+                    <button id="closeViewer" class="close-btn">✕ Close</button>
+                </div>
+                <div class="loaded-code-content">
+                    <pre id="loadedCodeContent" class="code-display"></pre>
+                </div>
+            </div>
+            
+            <div class="info-bar">
+                💡 <strong>Tip:</strong> Just start typing! Your code will automatically sync with everyone else in real-time.
+            </div>
         </div>
     </div>
 
-    <h1>Global Code Board</h1>
-    <p>Everyone sees and edits the same code in real time. <a href="/" style="color: #007bff; text-decoration: none;">🔄 Live Editor</a></p>
-    <textarea id="code" placeholder="Start typing..."></textarea>
-    <div id="row">
-		<input type="text" id="snapshotName" placeholder="Enter snapshot name..." style="flex: 1; padding: 10px 16px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;" />
-		<button id="saveBtn">Save Snapshot</button>
-		<span id="status" aria-live="polite"></span>
-	</div>
-	<div id="snapshotRow" style="margin-top:8px; display:none;">
-		<label>Snapshot link:</label>
-		<input id="snapshotLink" readonly style="width:100%; padding:8px;" />
-	</div>
-	<div id="sharedSnapshots" style="margin-top:16px;">
-		<h3>Shared Snapshots</h3>
-		<div id="snapshotList"></div>
-	</div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Wait for Socket.IO to be loaded
+        function waitForSocketIO(callback) {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max wait
+            
+            function check() {
+                attempts++;
+                if (typeof io !== 'undefined') {
+                    callback();
+                } else if (attempts < maxAttempts) {
+                    setTimeout(check, 100);
+                } else {
+                    console.error('Socket.IO failed to load after 5 seconds');
+                    const debugInfo = document.getElementById('debugInfo');
+                    if (debugInfo) {
+                        debugInfo.innerHTML = '<strong>Debug Error:</strong> Socket.IO library failed to load. Please refresh the page.';
+                    }
+                }
+            }
+            
+            check();
+        }
 
-	<script src="/socket.io/socket.io.js"></script>
-	<script>
-		const socket = io();
-		const textarea = document.getElementById('code');
-		const status = document.getElementById('status');
-		const snapshotList = document.getElementById('snapshotList');
-		const userModal = document.getElementById('userModal');
-		let username = '';
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, waiting for Socket.IO...');
+            
+            // Wait for Socket.IO to be available
+            waitForSocketIO(function() {
+                console.log('Socket.IO library loaded, initializing...');
+                initializeApp();
+            });
+        });
 
-		// Show username modal on load
-		userModal.style.display = 'block';
+        function initializeApp() {
+            // Get all required elements
+            const codeEditor = document.getElementById('codeEditor');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const connectedCount = document.getElementById('connectedCount');
+            const saveBtn = document.getElementById('saveBtn');
+            const saveStatus = document.getElementById('saveStatus');
+            const debugInfo = document.getElementById('debugInfo');
+            const codeTitleInput = document.getElementById('codeTitle');
+            const savedCodesSection = document.getElementById('savedCodesSection');
+            const savedCodesList = document.getElementById('savedCodesList');
+            const loadedCodeView = document.getElementById('loadedCodeView');
+            const loadedCodeTitle = document.getElementById('loadedCodeTitle');
+            const loadedCodeContent = document.getElementById('loadedCodeContent');
+            const closeViewerBtn = document.getElementById('closeViewer');
+            
+            // Debug: Check if elements are found
+            console.log('Elements found:', {
+                codeEditor: !!codeEditor,
+                statusIndicator: !!statusIndicator,
+                statusText: !!statusText,
+                connectedCount: !!connectedCount,
+                saveBtn: !!saveBtn,
+                saveStatus: !!saveStatus,
+                debugInfo: !!debugInfo,
+                codeTitleInput: !!codeTitleInput,
+                savedCodesSection: !!savedCodesSection,
+                savedCodesList: !!savedCodesList,
+                loadedCodeView: !!loadedCodeView,
+                loadedCodeTitle: !!loadedCodeTitle,
+                loadedCodeContent: !!loadedCodeContent,
+                closeViewerBtn: !!closeViewerBtn
+            });
+            
+            // Update debug info
+            if (debugInfo) {
+                debugInfo.innerHTML = '<strong>Debug Info:</strong> Elements loaded. Initializing Socket.IO...';
+            }
+            
+            let isApplyingRemote = false;
+            let lastLocalValue = '';
+            let connectedUsers = 0;
+            let hasSharedCode = false; // Flag to track if code was just shared
 
-		function joinChat() {
-			const nameInput = document.getElementById('username');
-			username = nameInput.value.trim();
-			if (!username) {
-				alert('Please enter a name');
-				return;
-			}
-			userModal.style.display = 'none';
-			socket.emit('user:join', username);
-		}
+            // Initialize Socket.IO
+            let socket;
+            try {
+                // Check if Socket.IO is loaded
+                if (typeof io === 'undefined') {
+                    throw new Error('Socket.IO library not loaded. Please refresh the page.');
+                }
+                
+                socket = io();
+                console.log('Socket.IO initialized');
+                if (debugInfo) {
+                    debugInfo.innerHTML = '<strong>Debug Info:</strong> Socket.IO initialized. Connecting...';
+                }
+            } catch (error) {
+                console.error('Failed to initialize Socket.IO:', error);
+                if (debugInfo) {
+                    debugInfo.innerHTML = '<strong>Debug Error:</strong> Socket.IO failed to initialize! ' + error.message;
+                }
+                return;
+            }
 
-		// Handle enter key in username input
-		document.getElementById('username').addEventListener('keypress', (e) => {
-			if (e.key === 'Enter') joinChat();
-		});
+            // Save functionality
+            if (saveBtn) {
+                saveBtn.addEventListener('click', () => {
+                    console.log('Save button clicked');
+                    const code = codeEditor.value.trim();
+                    const title = codeTitleInput.value.trim();
 
-		socket.on('connect', () => {
-			status.textContent = 'Connected';
-		});
+                    if (!code) {
+                        showSaveStatus('No code to save!', 'error');
+                        return;
+                    }
 
-		socket.on('user:joined', ({ username }) => {
-			status.textContent = `${username} joined`;
-			setTimeout(() => {
-				if (status.textContent === `${username} joined`) {
-					status.textContent = 'Connected';
-				}
-			}, 3000);
-		});
+                    if (!title) {
+                        showSaveStatus('Code title is required!', 'error');
+                        return;
+                    }
 
-		socket.on('user:left', ({ username }) => {
-			status.textContent = `${username} left`;
-			setTimeout(() => {
-				if (status.textContent === `${username} left`) {
-					status.textContent = 'Connected';
-				}
-			}, 3000);
-		});
+                    try {
+                        socket.emit('code:save', { code: code, title: title });
+                        showSaveStatus('Code shared successfully!');
+                        console.log('Code shared successfully');
+                        
+                        // Clear both inputs after sharing
+                        codeTitleInput.value = '';
+                        codeEditor.value = '';
+                        lastLocalValue = ''; // Reset lastLocalValue to prevent sync issues
+                        hasSharedCode = true; // Set flag to true after sharing
+                        
+                        // Show success message first, then clear editor after a short delay
+                        setTimeout(() => {
+                            if (codeEditor) {
+                                codeEditor.value = '';
+                                lastLocalValue = '';
+                            }
+                        }, 500);
+                        
+                    } catch (error) {
+                        console.error('Error sharing code:', error);
+                        showSaveStatus('Error sharing code!', 'error');
+                    }
+                });
+            }
 
-		// Receive initial content
-		socket.on('init', ({ code }) => {
-			isApplyingRemote = true;
-			textarea.value = code || '';
-			lastLocalValue = textarea.value;
-			isApplyingRemote = false;
-		});
+            function showSaveStatus(message, type = 'success') {
+                if (saveStatus) {
+                    saveStatus.textContent = message;
+                    saveStatus.className = `save-status ${type}`;
+                    
+                    // Clear status after 3 seconds
+                    setTimeout(() => {
+                        if (saveStatus) {
+                            saveStatus.textContent = '';
+                            saveStatus.className = 'save-status';
+                        }
+                    }, 3000);
+                }
+            }
 
-		// Receive initial snapshots
-		socket.on('snapshots:init', ({ snapshots }) => {
-			snapshots.forEach(snapshot => {
-				sharedSnapshots.set(snapshot.id, { url: snapshot.url, name: snapshot.name });
-			});
-			updateSnapshotList();
-			if (snapshots.length > 0) {
-				status.textContent = `Loaded ${snapshots.length} existing snapshot(s)`;
-			}
-		});
+            // Connection status
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                if (statusIndicator) statusIndicator.classList.add('connected');
+                if (statusText) statusText.textContent = 'Connected';
+                if (debugInfo) {
+                    debugInfo.innerHTML = '<strong>Debug Info:</strong> ✅ Connected to server!';
+                }
+                updateConnectedCount(1);
+            });
 
-		// Receive broadcast updates from others
-		socket.on('code:broadcast', ({ code, username }) => {
-			isApplyingRemote = true;
-			textarea.value = code || '';
-			lastLocalValue = textarea.value;
-			isApplyingRemote = false;
-			status.textContent = `Updated by ${username}`;
-		});
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                if (debugInfo) {
+                    debugInfo.innerHTML = '<strong>Debug Error:</strong> ❌ Connection failed: ' + error.message;
+                }
+            });
 
-		// Receive snapshot creation broadcast
-		socket.on('snapshot:created', ({ id, name, url }) => {
-			sharedSnapshots.set(id, { url: url, name: name });
-			updateSnapshotList();
-			status.textContent = 'New snapshot shared!';
-		});
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                if (statusIndicator) statusIndicator.classList.remove('connected');
+                if (statusText) statusText.textContent = 'Disconnected - Reconnecting...';
+                if (debugInfo) {
+                    debugInfo.innerHTML = '<strong>Debug Info:</strong> 🔄 Disconnected, reconnecting...';
+                }
+                updateConnectedCount(0);
+            });
 
-		// Receive snapshot deletion broadcast
-		socket.on('snapshot:deleted', ({ id }) => {
-			sharedSnapshots.delete(id);
-			updateSnapshotList();
-			status.textContent = 'Snapshot deleted';
-		});
+            // Handle initial code load
+            socket.on('init', ({ code }) => {
+                console.log('Received initial code:', code ? code.length : 0, 'characters');
+                isApplyingRemote = true;
+                if (codeEditor) {
+                    codeEditor.value = code || '';
+                    lastLocalValue = codeEditor.value;
+                }
+                isApplyingRemote = false;
+                if (statusText) statusText.textContent = 'Connected';
+            });
 
-		function updateSnapshotList() {
-			if (sharedSnapshots.size === 0) {
-				snapshotList.innerHTML = '<p style="color:#666;">No snapshots yet</p>';
-				return;
-			}
-			
-			snapshotList.innerHTML = '';
-			sharedSnapshots.forEach((snapshot, id) => {
-				const item = document.createElement('div');
-				item.className = 'snapshot-item';
-				item.innerHTML = `
-					<a href="${snapshot.url}" target="_blank" class="snapshot-link">${snapshot.name}</a>
-					<button onclick="deleteSnapshot('${id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; font-size:12px;">Delete</button>
-				`;
-				snapshotList.appendChild(item);
-			});
-		}
+            // Handle code updates from other users
+            socket.on('code:broadcast', ({ code }) => {
+                console.log('Received code update from another user:', code ? code.length : 0, 'characters');
+                isApplyingRemote = true;
+                if (codeEditor) {
+                    codeEditor.value = code || '';
+                    lastLocalValue = codeEditor.value;
+                }
+                isApplyingRemote = false;
+                if (statusText) statusText.textContent = 'Updated by another user';
+                
+                // Reset status after 3 seconds
+                setTimeout(() => {
+                    if (statusText && statusText.textContent === 'Updated by another user') {
+                        statusText.textContent = 'Connected';
+                    }
+                }, 3000);
+            });
 
-		window.deleteSnapshot = async (id) => {
-			if (!confirm('Delete this snapshot? This cannot be undone.')) return;
-			try {
-				const res = await fetch('/api/snapshot/' + encodeURIComponent(id), { method: 'DELETE' });
-				if (!res.ok) throw new Error('Failed to delete');
-				status.textContent = 'Deleted!';
-			} catch (e) {
-				status.textContent = 'Delete failed';
-			}
-		};
+            // Handle saved codes from server
+            socket.on('savedCodes:init', ({ savedCodes }) => {
+                console.log('Received initial saved codes:', savedCodes.length);
+                if (savedCodes.length > 0) {
+                    renderSavedCodes(savedCodes);
+                    if (savedCodesSection) {
+                        savedCodesSection.style.display = 'block';
+                    }
+                }
+            });
 
-		// Send local changes
-		textarea.addEventListener('input', () => {
-			if (isApplyingRemote) return;
-			const value = textarea.value;
-			if (value === lastLocalValue) return;
-			lastLocalValue = value;
-			socket.emit('code:update', { code: value });
-			status.textContent = 'Synced';
-		});
+            socket.on('code:saved', (savedCode) => {
+                console.log('New code saved:', savedCode.title);
+                
+                // Clear the editor immediately when code is saved (backup clearing)
+                if (codeEditor) {
+                    console.log('Backup clearing editor after code saved...');
+                    codeEditor.value = '';
+                    lastLocalValue = '';
+                }
+                
+                // Add the new code to the list
+                if (savedCodesList) {
+                    const li = document.createElement('li');
+                    li.setAttribute('data-id', savedCode.id);
+                    li.innerHTML = `
+                        <div class="code-title">${savedCode.title}</div>
+                        <div class="code-date">Shared on: ${new Date(savedCode.timestamp).toLocaleDateString()}</div>
+                        <div class="code-actions">
+                            <button onclick="window.loadCode('${savedCode.code.replace(/'/g, "\\'")}', '${savedCode.title.replace(/'/g, "\\'")}')">Load</button>
+                            <button onclick="window.deleteCode('${savedCode.id}')">Delete</button>
+                        </div>
+                    `;
+                    savedCodesList.appendChild(li);
+                    
+                    if (savedCodesSection) {
+                        savedCodesSection.style.display = 'block';
+                    }
+                }
+                showSaveStatus('Code shared successfully!');
+            });
 
-		// Clear placeholder when text is pasted or typed
-		textarea.addEventListener('paste', () => {
-			// Clear placeholder after a short delay to allow paste to complete
-			setTimeout(() => {
-				if (textarea.value && textarea.value !== '') {
-					textarea.placeholder = '';
-				}
-			}, 10);
-		});
+            // Handle code deletion
+            socket.on('code:deleted', ({ id }) => {
+                console.log('Code deleted:', id);
+                // Remove the deleted code from the list
+                const codeElement = savedCodesList.querySelector(`[data-id="${id}"]`);
+                if (codeElement) {
+                    codeElement.remove();
+                }
+                
+                // Hide section if no codes left
+                if (savedCodesList.children.length === 0) {
+                    if (savedCodesSection) {
+                        savedCodesSection.style.display = 'none';
+                    }
+                }
+            });
 
-		// Clear placeholder on first input
-		textarea.addEventListener('input', () => {
-			if (textarea.value && textarea.value !== '') {
-				textarea.placeholder = '';
-			}
-		}, { once: true });
+            // Handle editor clearing after code is shared
+            socket.on('code:clear', ({ message }) => {
+                console.log('Editor cleared event received:', message);
+                
+                // Clear the editor for all users
+                if (codeEditor) {
+                    console.log('Clearing code editor...');
+                    codeEditor.value = '';
+                    lastLocalValue = '';
+                    console.log('Code editor cleared successfully');
+                }
+                
+                // Update status message
+                if (statusText) {
+                    statusText.textContent = message;
+                    setTimeout(() => {
+                        if (statusText) {
+                            statusText.textContent = 'Connected';
+                        }
+                    }, 3000);
+                }
+                
+                // Reset the shared code flag
+                hasSharedCode = false;
+                console.log('Editor clear completed, hasSharedCode reset to false');
+            });
 
-		document.getElementById('saveBtn').addEventListener('click', async () => {
-			const nameInput = document.getElementById('snapshotName');
-			const name = nameInput.value.trim() || `Snapshot ${Date.now()}`;
-			
-			status.textContent = 'Saving snapshot...';
-			try {
-				const res = await fetch('/api/snapshot', { 
-					method: 'POST', 
-					headers: { 
-						'Accept': 'application/json',
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({ name: name, username: username })
-				});
-				let data;
-				const ct = res.headers.get('content-type') || '';
-				if (ct.includes('application/json')) {
-					data = await res.json();
-				} else {
-					const text = await res.text();
-					throw new Error('Unexpected response: ' + text.slice(0, 120));
-				}
-				if (!res.ok) throw new Error(data.error || 'Failed to save');
-				document.getElementById('snapshotRow').style.display = 'block';
-				const link = document.getElementById('snapshotLink');
-				link.value = data.url;
-				link.focus();
-				link.select();
-				status.textContent = 'Snapshot saved!';
-				
-				// Clear the textarea and name input after saving
-				textarea.value = '';
-				lastLocalValue = '';
-				textarea.placeholder = 'Start typing...';
-				nameInput.value = '';
-				socket.emit('code:update', { code: '' });
-			} catch (e) {
-				status.textContent = e.message || 'Error saving snapshot';
-			}
-		});
+            // Send local changes
+            if (codeEditor) {
+                codeEditor.addEventListener('input', () => {
+                    if (isApplyingRemote) return;
+                    
+                    const value = codeEditor.value;
+                    if (value === lastLocalValue) return;
+                    
+                    // If code was just shared, don't sync it
+                    if (hasSharedCode && value === '') return;
+                    
+                    lastLocalValue = value;
+                    console.log('Sending code update:', value.length, 'characters');
+                    socket.emit('code:update', { code: value });
+                    if (statusText) statusText.textContent = 'Syncing...';
+                    
+                    // Reset status after 2 seconds
+                    setTimeout(() => {
+                        if (statusText && statusText.textContent === 'Syncing...') {
+                            statusText.textContent = 'Connected';
+                        }
+                    }, 2000);
+                });
+            }
 
-		// Initialize snapshot list
-		updateSnapshotList();
+            // Update connected users count
+            function updateConnectedCount(count) {
+                connectedUsers = Math.max(0, connectedUsers + count);
+                if (connectedCount) {
+                    connectedCount.textContent = `${connectedUsers} online`;
+                }
+                console.log('Connected users:', connectedUsers);
+            }
 
-		function updateSnapshotsList(snapshot) {
-			const snapshotList = document.getElementById('snapshotList');
-			const item = document.createElement('div');
-			item.className = 'snapshot-item';
-			
-			const time = new Date(snapshot.timestamp).toLocaleString();
-			item.innerHTML = `
-				<strong>${snapshot.name}</strong> 
-				<span style="color: #888">(by ${snapshot.creator})</span>
-				<div>${time}</div>
-				<a href="${snapshot.url}" target="_blank">View Chat</a>
-			`;
-			
-			snapshotList.insertBefore(item, snapshotList.firstChild);
-		}
+            // Handle user connections/disconnections
+            socket.on('user:connected', () => {
+                console.log('Another user connected');
+                updateConnectedCount(1);
+            });
 
-		// Update your socket.io event handlers
-		socket.on('snapshot:created', (snapshot) => {
-			updateSnapshotsList(snapshot);
-			status.textContent = `Snapshot saved: ${snapshot.name}`;
-		});
+            socket.on('user:disconnected', () => {
+                console.log('Another user disconnected');
+                updateConnectedCount(-1);
+            });
 
-		socket.on('snapshots:init', ({ snapshots }) => {
-			snapshots.forEach(updateSnapshotsList);
-		});
-	</script>
+            // Auto-resize textarea
+            function autoResize() {
+                if (codeEditor) {
+                    codeEditor.style.height = 'auto';
+                    codeEditor.style.height = Math.max(500, codeEditor.scrollHeight) + 'px';
+                }
+            }
+
+            if (codeEditor) {
+                codeEditor.addEventListener('input', autoResize);
+            }
+            window.addEventListener('resize', autoResize);
+
+            // Focus editor on page load
+            if (codeEditor) {
+                codeEditor.focus();
+            }
+            
+            // Test connection after 2 seconds
+            setTimeout(() => {
+                if (debugInfo) {
+                    debugInfo.innerHTML = '<strong>Debug Info:</strong> Page loaded. Check console for connection status.';
+                }
+            }, 2000);
+
+            // Function to render saved codes
+            function renderSavedCodes(codes) {
+                if (!savedCodesList) return;
+                savedCodesList.innerHTML = ''; // Clear previous list
+                
+                codes.forEach(code => {
+                    const li = document.createElement('li');
+                    li.setAttribute('data-id', code.id);
+                    li.innerHTML = `
+                        <div class="code-title">${code.title}</div>
+                        <div class="code-date">Shared on: ${new Date(code.timestamp).toLocaleDateString()}</div>
+                        <div class="code-actions">
+                            <button onclick="window.loadCode('${code.code.replace(/'/g, "\\'")}', '${code.title.replace(/'/g, "\\'")}')">Load</button>
+                            <button onclick="window.deleteCode('${code.id}')">Delete</button>
+                        </div>
+                    `;
+                    savedCodesList.appendChild(li);
+                });
+                
+                // Show section if there are codes
+                if (codes.length > 0 && savedCodesSection) {
+                    savedCodesSection.style.display = 'block';
+                }
+            }
+
+            // Function to load code
+            window.loadCode = function(code, title) {
+                console.log('loadCode called with:', { code: code ? code.length : 0, title: title });
+                console.log('loadedCodeView available:', !!loadedCodeView);
+                console.log('loadedCodeTitle available:', !!loadedCodeTitle);
+                console.log('loadedCodeContent available:', !!loadedCodeContent);
+                
+                if (loadedCodeView && loadedCodeTitle && loadedCodeContent) {
+                    // Show the code in the separate viewer
+                    loadedCodeTitle.textContent = title;
+                    loadedCodeContent.textContent = code;
+                    loadedCodeView.style.display = 'block';
+                    
+                    // Scroll to the viewer
+                    loadedCodeView.scrollIntoView({ behavior: 'smooth' });
+                    
+                    showSaveStatus('Code loaded in viewer!');
+                    console.log('Code loaded in viewer successfully');
+                } else {
+                    console.error('Code viewer elements not available');
+                    showSaveStatus('Error: Viewer not available', 'error');
+                }
+            };
+
+            // Function to delete code
+            window.deleteCode = function(codeId) {
+                console.log('deleteCode called with:', codeId);
+                console.log('socket available:', !!socket);
+                
+                if (confirm('Are you sure you want to delete this code?')) {
+                    if (socket) {
+                        socket.emit('code:delete', { id: codeId });
+                        showSaveStatus('Code deleted successfully!');
+                        console.log('Code deleted successfully');
+                    } else {
+                        console.error('socket not available');
+                        showSaveStatus('Error: Connection not available', 'error');
+                    }
+                }
+            };
+
+            // Handle loaded code view
+            if (loadedCodeView) {
+                loadedCodeView.style.display = 'none'; // Hide by default
+            }
+
+            if (closeViewerBtn) {
+                closeViewerBtn.addEventListener('click', () => {
+                    if (loadedCodeView) {
+                        loadedCodeView.style.display = 'none';
+                    }
+                });
+            }
+        }
+    </script>
 </body>
 </html>
 

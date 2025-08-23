@@ -1,84 +1,80 @@
-# Global Code Board
+# Real-Time Code Sharing
 
-A real-time collaborative code editor where everyone sees and edits the same code simultaneously.
+A simple, clean real-time code sharing website where multiple users can collaborate on code simultaneously.
 
 ## Features
 
-- 🔄 **Real-time collaboration** - Multiple users can edit code simultaneously
-- 💾 **Snapshot sharing** - Save and share code snapshots with unique URLs
-- 📱 **Responsive design** - Works on desktop and mobile
-- 🚀 **Instant sync** - Changes appear in real-time across all connected users
+- **Real-time synchronization**: Code changes are instantly shared with all connected users
+- **Simple interface**: Clean, modern UI focused on code editing
+- **No registration required**: Just open the website and start coding
+- **Live connection status**: See when you're connected and how many others are online
+- **Responsive design**: Works on desktop and mobile devices
 
-## Deployment Options
+## How it works
 
-### Option 1: Railway (Recommended for real-time apps)
+1. Open the website in your browser
+2. Start typing code in the editor
+3. Your code automatically syncs with everyone else in real-time
+4. See live updates as others type
+5. No accounts, no names, no complexity - just pure code collaboration
 
-1. **Fork/Clone this repository**
-2. **Sign up at [Railway.app](https://railway.app)**
-3. **Connect your GitHub repository**
-4. **Deploy automatically** - Railway will detect the Node.js app and deploy it
-5. **Get your live URL** - Share with friends!
+## Getting Started
 
-### Option 2: Render
+### Prerequisites
 
-1. **Fork/Clone this repository**
-2. **Sign up at [Render.com](https://render.com)**
-3. **Create a new Web Service**
-4. **Connect your repository**
-5. **Set build command:** `npm install`
-6. **Set start command:** `npm start`
-7. **Deploy!**
+- Node.js (version 14 or higher)
+- npm or yarn
 
-### Option 3: Heroku
+### Installation
 
-1. **Fork/Clone this repository**
-2. **Sign up at [Heroku.com](https://heroku.com)**
-3. **Install Heroku CLI**
-4. **Run commands:**
-   ```bash
-   heroku create your-app-name
-   git push heroku main
-   heroku open
-   ```
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd ShareTheCode
+```
 
-## Local Development
+2. Install dependencies:
+```bash
+npm install
+```
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+3. Start the server:
+```bash
+npm start
+```
 
-2. **Start the server:**
-   ```bash
-   npm start
-   ```
+4. Open your browser and navigate to `http://localhost:3000`
 
-3. **Open in browser:**
-   ```
-   http://localhost:3000
-   ```
+### Development
 
-## How to Use
+To run in development mode:
+```bash
+npm run dev
+```
 
-1. **Open the app** in your browser
-2. **Start typing** - your code will sync in real-time
-3. **Share with friends** - they'll see your changes instantly
-4. **Save snapshots** - click "Save Snapshot" to create shareable links
-5. **View snapshots** - click on snapshot links to view saved code
+## Technology Stack
 
-## Tech Stack
+- **Backend**: Node.js, Express.js, Socket.IO
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+- **Real-time Communication**: WebSocket via Socket.IO
 
-- **Backend:** Node.js, Express, Socket.IO
-- **Frontend:** Vanilla JavaScript, HTML, CSS
-- **Real-time:** Socket.IO for live collaboration
-- **Deployment:** Railway/Render/Heroku ready
+## Usage
 
-## Environment Variables
+- Simply start typing in the code editor
+- All changes are automatically synchronized with other users
+- The connection status indicator shows when you're connected
+- The user count shows how many people are currently online
 
-- `PORT` - Server port (default: 3000)
-- `HOST` - Server host (default: 0.0.0.0)
-- `RAILWAY_STATIC_URL` - Custom domain for Railway (optional)
+## Deployment
 
----
+The application is ready for deployment on platforms like:
+- Heroku
+- Railway
+- Vercel
+- Any Node.js hosting service
 
-**Note:** This app uses in-memory storage for snapshots. They will be lost when the server restarts. For production use, consider adding a database.
+Set the `PORT` environment variable if needed.
+
+## License
+
+ISC
