@@ -1111,19 +1111,9 @@
                     lastLocalValue = '';
                 }
                 
-                // Add the new code to the list
+                // Add the new code to the list using the same render function but append mode
                 if (savedCodesList) {
-                    const li = document.createElement('li');
-                    li.setAttribute('data-id', savedCode.id);
-                    li.innerHTML = `
-                        <div class="code-title">${savedCode.title}</div>
-                        <div class="code-date">Shared on: ${new Date(savedCode.timestamp).toLocaleDateString()}</div>
-                        <div class="code-actions">
-                            <button onclick="window.loadCode('${savedCode.code.replace(/'/g, "\\'")}', '${savedCode.title.replace(/'/g, "\\'")}')">Load</button>
-                            <button onclick="window.deleteCode('${savedCode.id}')">Delete</button>
-                        </div>
-                    `;
-                    savedCodesList.appendChild(li);
+                    addSavedCodeToList(savedCode);
                     
                     if (savedCodesSection) {
                         savedCodesSection.style.display = 'block';
@@ -1246,49 +1236,58 @@
                 }
             }, 2000);
 
-            // Function to render saved codes
+            // Function to render saved codes (clears and renders all)
             function renderSavedCodes(codes) {
                 if (!savedCodesList) return;
                 savedCodesList.innerHTML = ''; // Clear previous list
                 
                 codes.forEach(code => {
-                    const li = document.createElement('li');
-                    li.setAttribute('data-id', code.id);
-                    
-                    // Create preview of code (first 200 characters or 8 lines, whichever comes first)
-                    const codeLines = code.code.split('\n');
-                    const previewLines = codeLines.slice(0, 8); // Show max 8 lines
-                    let codePreview = previewLines.join('\n');
-                    if (codePreview.length > 200) {
-                        codePreview = codePreview.substring(0, 200) + '...';
-                    } else if (codeLines.length > 8) {
-                        codePreview += '\n...';
-                    }
-                    
-                    // Escape code for safe HTML insertion
-                    const escapedCode = code.code.replace(/'/g, "\\'")
-                                                 .replace(/"/g, '&quot;')
-                                                 .replace(/</g, '&lt;')
-                                                 .replace(/>/g, '&gt;');
-                    const escapedTitle = code.title.replace(/'/g, "\\'")
-                                                   .replace(/"/g, '&quot;');
-                    
-                    li.innerHTML = `
-                        <div class="code-title">${code.title}</div>
-                        <div class="code-date">Shared on: ${new Date(code.timestamp).toLocaleDateString()} • ${code.code.split('\n').length} line${code.code.split('\n').length !== 1 ? 's' : ''}</div>
-                        <div class="code-preview">${codePreview}</div>
-                        <div class="code-actions">
-                            <button onclick="window.loadCode('${escapedCode}', '${escapedTitle}')">📖 View Full Code</button>
-                            <button onclick="window.deleteCode('${code.id}')">🗑️ Delete</button>
-                        </div>
-                    `;
-                    savedCodesList.appendChild(li);
+                    addSavedCodeToList(code);
                 });
                 
                 // Show section if there are codes
                 if (codes.length > 0 && savedCodesSection) {
                     savedCodesSection.style.display = 'block';
                 }
+            }
+            
+            // Function to add a single saved code to the list (appends to existing list)
+            function addSavedCodeToList(code) {
+                if (!savedCodesList) return;
+                
+                const li = document.createElement('li');
+                li.setAttribute('data-id', code.id);
+                
+                // Create preview of code (first 200 characters or 8 lines, whichever comes first)
+                const codeLines = code.code.split('\n');
+                const previewLines = codeLines.slice(0, 8); // Show max 8 lines
+                let codePreview = previewLines.join('\n');
+                if (codePreview.length > 200) {
+                    codePreview = codePreview.substring(0, 200) + '...';
+                } else if (codeLines.length > 8) {
+                    codePreview += '\n...';
+                }
+                
+                // Escape code for safe HTML insertion
+                const escapedCode = code.code.replace(/'/g, "\\'")
+                                             .replace(/"/g, '&quot;')
+                                             .replace(/</g, '&lt;')
+                                             .replace(/>/g, '&gt;');
+                const escapedTitle = code.title.replace(/'/g, "\\'")
+                                               .replace(/"/g, '&quot;');
+                
+                li.innerHTML = `
+                    <div class="code-title">${code.title}</div>
+                    <div class="code-date">Shared on: ${new Date(code.timestamp).toLocaleDateString()} • ${code.code.split('\n').length} line${code.code.split('\n').length !== 1 ? 's' : ''}</div>
+                    <div class="code-preview">${codePreview}</div>
+                    <div class="code-actions">
+                        <button onclick="window.loadCode('${escapedCode}', '${escapedTitle}')">📖 View Full Code</button>
+                        <button onclick="window.deleteCode('${code.id}')">🗑️ Delete</button>
+                    </div>
+                `;
+                
+                // Insert the new code at the top of the list (most recent first)
+                savedCodesList.insertBefore(li, savedCodesList.firstChild);
             }
 
             // Function to load code
