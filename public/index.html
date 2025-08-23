@@ -683,6 +683,116 @@
             background: #a1a1a1;
         }
         
+        /* Online Users List Styles */
+        .online-users-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .online-users-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .online-users-title {
+            color: #2c3e50;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .online-count-badge {
+            background: #27ae60;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .user-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .user-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .user-status {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+        
+        .empty-users {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 20px;
+        }
+        
         /* Hidden class */
         .hidden {
             display: none !important;
@@ -777,6 +887,19 @@
                 <div class="section-header">
                     <h2 class="section-title">📝 Real-Time Code Sharing</h2>
                     <p class="section-description">Write code together in real-time with your team</p>
+                </div>
+                
+                <!-- Online Users Section -->
+                <div class="online-users-section" id="onlineUsersSection" style="display: none;">
+                    <div class="online-users-header">
+                        <div class="online-users-title">
+                            👥 Online Users
+                            <span class="online-count-badge" id="onlineCountBadge">0</span>
+                        </div>
+                    </div>
+                    <div class="users-grid" id="usersGrid">
+                        <div class="empty-users" id="emptyUsers">No users online. Join to start collaborating!</div>
+                    </div>
                 </div>
                 
                 <div class="editor-container">
@@ -923,6 +1046,12 @@
             const chatInput = document.getElementById('chatInput');
             const sendBtn = document.getElementById('sendBtn');
             const onlineUsersList = document.getElementById('onlineUsersList');
+            
+            // Online users elements
+            const onlineUsersSection = document.getElementById('onlineUsersSection');
+            const onlineCountBadge = document.getElementById('onlineCountBadge');
+            const usersGrid = document.getElementById('usersGrid');
+            const emptyUsers = document.getElementById('emptyUsers');
             
             // Debug: Check if elements are found
             console.log('Elements found:', {
@@ -1483,6 +1612,75 @@
                 });
             }
             
+            // Function to render online users list
+            function renderOnlineUsers(users) {
+                if (!usersGrid) return;
+                
+                const userCount = users.length;
+                
+                // Update count badge
+                if (onlineCountBadge) {
+                    onlineCountBadge.textContent = userCount;
+                }
+                
+                // Show/hide section based on user count
+                if (onlineUsersSection) {
+                    if (userCount > 0) {
+                        onlineUsersSection.style.display = 'block';
+                    } else {
+                        onlineUsersSection.style.display = 'none';
+                    }
+                }
+                
+                // Clear existing users
+                usersGrid.innerHTML = '';
+                
+                if (userCount === 0) {
+                    // Show empty message
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'empty-users';
+                    emptyDiv.textContent = 'No users online. Join to start collaborating!';
+                    usersGrid.appendChild(emptyDiv);
+                } else {
+                    // Create user cards
+                    users.forEach(user => {
+                        const userCard = document.createElement('div');
+                        userCard.className = 'user-card';
+                        
+                        // Generate avatar initials (first letter of username)
+                        const initials = user.username.charAt(0).toUpperCase();
+                        
+                        // Calculate time since joined
+                        const joinedTime = new Date(user.joinedAt);
+                        const now = new Date();
+                        const diffMinutes = Math.floor((now - joinedTime) / 60000);
+                        let timeText = 'just joined';
+                        
+                        if (diffMinutes > 0) {
+                            if (diffMinutes < 60) {
+                                timeText = `${diffMinutes}m ago`;
+                            } else {
+                                const diffHours = Math.floor(diffMinutes / 60);
+                                timeText = `${diffHours}h ago`;
+                            }
+                        }
+                        
+                        userCard.innerHTML = `
+                            <div class="user-avatar">${initials}</div>
+                            <div class="user-info">
+                                <div class="user-name">${escapeHtml(user.username)}</div>
+                                <div class="user-status">
+                                    <div class="status-dot"></div>
+                                    <span>online • ${timeText}</span>
+                                </div>
+                            </div>
+                        `;
+                        
+                        usersGrid.appendChild(userCard);
+                    });
+                }
+            }
+            
             // Socket event handlers for username and chat
             socket.on('users:update', ({ users }) => {
                 console.log('Users updated:', users);
@@ -1496,6 +1694,9 @@
                 if (onlineUsersList) {
                     onlineUsersList.textContent = `${userCount} user${userCount !== 1 ? 's' : ''} online`;
                 }
+                
+                // Update online users display with names
+                renderOnlineUsers(users);
             });
             
             socket.on('chat:message', (message) => {
