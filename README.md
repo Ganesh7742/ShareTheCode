@@ -1,79 +1,36 @@
-# Real-Time Code Sharing
+# Real-Time File Sharing
 
-A simple, clean real-time code sharing website where multiple users can collaborate on code simultaneously.
+A high-performance, real-time file sharing application built with Node.js and Socket.IO. Overcomes traditional email limits and browser RAM restrictions for massive file transfers.
 
 ## Features
 
-- **Real-time synchronization**: Code changes are instantly shared with all connected users
-- **Simple interface**: Clean, modern UI focused on code editing
-- **No registration required**: Just open the website and start coding
-- **Live connection status**: See when you're connected and how many others are online
-- **Responsive design**: Works on desktop and mobile devices
+- **Real-time File Sharing**: Share files instantly with all connected users.
+- **Massive File Support (10GB+)**: Uses the **File System Access API** to write incoming chunks directly to disk, bypassing browser RAM limits.
+- **Chunked Transfer**: Files are split into 1MB chunks for reliability and performance.
+- **No Registration**: Join a session with just a name and start sharing.
+- **Progress Tracking**: Real-time upload and download progress bars.
+- **Modern UI**: Simple drag-and-drop interface with "Direct-to-Disk" option for large files.
 
 ## How it works
 
-1. Open the website in your browser
-2. Start typing code in the editor
-3. Your code automatically syncs with everyone else in real-time
-4. See live updates as others type
-5. No accounts, no names, no complexity - just pure code collaboration
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (version 14 or higher)
-- npm or yarn
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd ShareTheCode
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the server:
-```bash
-npm start
-```
-
-4. Open your browser and navigate to `http://localhost:3000`
-
-### Development
-
-To run in development mode:
-```bash
-npm run dev
-```
+1. **Join**: Enter your name to join the session.
+2. **Upload**: Drag and drop any file into the upload zone.
+3. **Synchronize**: The file is split into 1MB chunks and broadcast to all connected users in real-time.
+4. **Receive/Download**: 
+    - For small files, the browser collects them in RAM and allows instant download.
+    - For large files (>50MB), the UI recommends **"Save to Disk"**, which writes the file directly to your hard drive as it arrives, enabling 10GB+ support.
 
 ## Technology Stack
 
-- **Backend**: Node.js, Express.js, Socket.IO
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **Real-time Communication**: WebSocket via Socket.IO
+- **Backend**: Node.js, Express.js, Socket.IO (100MB Buffer)
+- **Frontend**: Vanilla JavaScript (File System Access API, FileReader, Blobs), HTML5, CSS3
 
-## Usage
+## Installation
 
-- Simply start typing in the code editor
-- All changes are automatically synchronized with other users
-- The connection status indicator shows when you're connected
-- The user count shows how many people are currently online
-
-## Deployment
-
-The application is ready for deployment on platforms like:
-- Heroku
-- Railway
-- Vercel
-- Any Node.js hosting service
-
-Set the `PORT` environment variable if needed.
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Start the server: `npm start`
+4. Access at `http://localhost:3000`
 
 ## License
 
